@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+<meta name="referrer" content="no-referrer">
+<title>HQ ダッシュボード</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-main">
+    <h1 class="site-title">HQ ダッシュボード</h1>
+    <p class="site-sub">オーナー専用</p>
+  </div>
+  <div class="header-meta" id="header-meta" aria-live="polite"></div>
+  <button type="button" class="btn btn--ghost" id="lock-button" hidden>ロック</button>
+</header>
+
+<main class="main">
+  <section class="lock" id="lock-screen" aria-labelledby="lock-title" hidden>
+    <h2 class="lock-title" id="lock-title">解錠</h2>
+    <p class="lock-lead">パスフレーズを入力してください。入力したパスフレーズはこのタブの中だけに保持され、タブを閉じると消えます。</p>
+    <form class="lock-form" id="lock-form" autocomplete="off">
+      <label class="lock-label" for="passphrase">パスフレーズ</label>
+      <input class="lock-input" id="passphrase" name="passphrase" type="password" required
+             autocomplete="current-password" spellcheck="false" autocapitalize="off">
+      <button class="btn btn--primary" type="submit" id="unlock-button">解錠する</button>
+    </form>
+    <p class="message" id="lock-message" role="alert"></p>
+    <p class="hint">確認用: <a href="?demo=1">サンプルデータ（平文）で開く</a></p>
+  </section>
+
+  <div class="dash" id="dashboard" hidden></div>
+
+  <p class="message message--error" id="boot-error" role="alert" hidden></p>
+  <noscript><p class="message message--error">このダッシュボードは JavaScript が必要です。</p></noscript>
+</main>
+
+<footer class="site-footer">
+  <p>HQ ダッシュボード — 画面はすべて復号したデータから描画しています。</p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
