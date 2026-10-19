@@ -1,5 +1,5 @@
 /* dashboard/views.css — v2 の各セクション(view-*)と charts.js の見た目
-   方針: 影なし・グラデーションなし・インライン style なし。ゴールド基調。
+   方針: インライン style なし。ゴールド基調。
    既存の CSS 変数は fallback 付きで使う。 */
 
 :root {

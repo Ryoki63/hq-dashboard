@@ -1,0 +1,467 @@
+/* dashboard/planner.css — Microsoft Planner / Fluent 風の見た目（第1段階）
+ * 最後に読み込む。DOM は変えず、色・形・余白・左ナビだけを上書きする。
+ *  1. アプリバー(濃色ヘッダ + ワッフル) 2. 左ナビ  3. 判断ボード(バケット列 + ラベル付きカード)
+ *  4. パネル/タイルのフラット化
+ */
+
+:root {
+  --pl-bar: #24211b;
+  --pl-bar-text: #f4efe3;
+  --pl-nav-w: 224px;
+  --pl-hdr: 48px;
+  --pl-canvas: #f3f2ee;
+  --pl-ink: 36, 33, 27;
+  --pl-card: #fff;
+  --pl-bucket: rgba(var(--pl-ink), 0.045);
+  --pl-card-line: rgba(var(--pl-ink), 0.1);
+}
+
+body { background: var(--pl-canvas); color-scheme: light; }
+
+/* ---------------------------------------------------------------- 1. アプリバー */
+
+.site-header {
+  min-height: var(--pl-hdr);
+  padding: 6px 16px;
+  background: var(--pl-bar);
+  color: var(--pl-bar-text);
+  border-bottom: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+/* アプリランチャー(3×3 のドット) */
+.header-main::before {
+  content: '';
+  flex: none;
+  width: 4px;
+  height: 4px;
+  margin: 0 20px 0 2px;
+  align-self: center;
+  border-radius: 1px;
+  background: var(--gold);
+  box-shadow:
+    7px 0 var(--gold), 14px 0 var(--gold),
+    0 7px var(--gold), 7px 7px var(--gold), 14px 7px var(--gold),
+    0 14px var(--gold), 7px 14px var(--gold), 14px 14px var(--gold);
+  opacity: 0.9;
+  transition: transform var(--mo-normal) var(--mo-ease);
+}
+.header-main:hover::before { transform: rotate(90deg); }
+
+.site-title { color: #fff; font-size: 15px; }
+.site-sub { color: var(--gold); }
+.header-label { color: var(--pl-bar-text); opacity: 0.62; }
+.header-value { color: #fff; }
+.header-item--warn { color: #ff9d8f; }
+.header-meta a, .header-item[href] { color: var(--gold); }
+.site-header .btn--ghost {
+  color: var(--pl-bar-text);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: transparent;
+}
+.site-header .btn--ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); box-shadow: none; }
+
+/* ---------------------------------------------------------------- 2. 左ナビ */
+
+.side-nav { display: none; }
+
+@media (min-width: 1100px) {
+  body:has(#dashboard:not([hidden])) .side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: fixed;
+    z-index: 5;
+    top: var(--pl-hdr);
+    bottom: 0;
+    left: 0;
+    width: var(--pl-nav-w);
+    padding: 14px 10px;
+    overflow-y: auto;
+    background: var(--pl-card);
+    border-right: 1px solid var(--pl-card-line);
+  }
+  body:has(#dashboard:not([hidden])) .main {
+    margin: 0 0 0 var(--pl-nav-w);
+    max-width: 1560px;
+    padding: 20px 24px 32px;
+  }
+  body:has(#dashboard:not([hidden])) .site-footer { margin-left: var(--pl-nav-w); }
+}
+
+.side-nav-title {
+  margin: 4px 10px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted, #8a867a);
+}
+
+.side-nav a {
+  --dot: var(--gold);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13.5px;
+  text-decoration: none;
+  transition: background-color var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.side-nav a::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+.side-nav a:hover { background: var(--pl-bucket); color: var(--heading); }
+.side-nav a.is-active {
+  background: rgba(222, 177, 67, 0.16);
+  color: var(--heading);
+  font-weight: 700;
+}
+/* アクティブ位置を示す縦の帯(Planner / Fluent の選択インジケータ) */
+.side-nav a.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--gold-dark);
+  animation: mo-grow 260ms var(--mo-ease) backwards;
+}
+.side-nav a:focus-visible { outline: 2px solid #1d5fd1; outline-offset: 1px; }
+.side-nav a[href='#decisions-panel'] { --dot: #b7791f; }
+.side-nav a[href='#agents'] { --dot: #2f855a; }
+.side-nav a[href='#models'] { --dot: #3b6ea8; }
+.side-nav a[href='#finance'] { --dot: #c0392b; }
+.side-nav a[href='#apps-panel'], .side-nav a[href='#tasks-panel'] { --dot: #8a5db0; }
+.side-nav a[href='#connections-panel'], .side-nav a[href='#ops-panel'] { --dot: #6b7280; }
+
+@keyframes mo-grow { from { transform: scaleY(0); } }
+
+html { scroll-behavior: smooth; }
+.dash > * { scroll-margin-top: calc(var(--pl-hdr) + 16px); }
+
+/* ---------------------------------------------------------------- 3. 判断ボード */
+
+/* バケット(列): 枠を消し、薄い面にして Planner のボードに寄せる */
+.board-columns { gap: 14px; }
+.board-column {
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--pl-bucket);
+  box-shadow: none;
+  padding: 12px 10px 10px;
+}
+.board-column-head { padding: 0 4px; }
+.board-column-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--heading);
+  font-size: 14px;
+  font-weight: 700;
+}
+.board-column-title::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--col);
+}
+.board-column-count {
+  min-width: 24px;
+  padding: 0 7px;
+  background: rgba(var(--pl-ink), 0.1);
+  color: var(--heading);
+  font-size: 12px;
+  line-height: 22px;
+}
+.board-column-hint { margin: 2px 4px 10px; color: #7b776a; }
+.board-column-body { gap: 10px; }
+.board-empty {
+  padding: 18px 8px;
+  border: 1px dashed rgba(var(--pl-ink), 0.18);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.board .board-column--over {
+  border: 2px solid var(--col);
+  background: rgba(222, 177, 67, 0.12);
+}
+
+/* カード: 白いタイル + 上のラベルバー + 柔らかい影 */
+.board-card {
+  border: 1px solid var(--pl-card-line);
+  border-left-width: 1px;
+  border-radius: 8px;
+  background: var(--pl-card);
+  padding: 12px 14px 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.board-card::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 6px;
+  margin-bottom: 8px;
+  border-radius: 3px;
+  background: var(--col, var(--board-pending));
+}
+.board-card--pending { --col: var(--board-pending); }
+.board-card--approved { --col: var(--board-approved); }
+.board-card--hold { --col: var(--board-hold); }
+.board-card--rejected { --col: var(--board-rejected); }
+.board-card-title { margin: 2px 0 8px; font-size: 15px; line-height: 1.45; }
+.board-card-id { color: #8a867a; font-size: 11.5px; }
+
+/* 「問い」「HQ の推奨」のラベルはタグ風に */
+.board-label {
+  padding: 1px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(222, 177, 67, 0.22);
+  color: #6b5100;
+  font-size: 11.5px;
+}
+
+/* 期限は丸いチップ(Planner の期限ラベル) */
+.board-meta-row { align-items: center; }
+.board-meta-name { flex: 0 0 6em; font-weight: 600; }
+.board-deadline {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 2px 12px;
+  border-radius: 14px;
+  line-height: 1.45;
+  background: rgba(var(--pl-ink), 0.07);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.board-deadline--urgent { background: #fdecc8; color: #8a5a00; }
+.board-deadline--overdue { background: #fbdcd7; color: #a02d20; }
+
+/* 案の比較は折りたたみ。Planner の「チェックリスト」のような見た目 */
+details.board-options {
+  margin: 0 0 8px;
+  border-radius: 8px;
+  background: rgba(var(--pl-ink), 0.035);
+}
+details.board-options > summary {
+  list-style: none;
+  cursor: pointer;
+  margin: 0;
+  padding: 7px 10px 7px 26px;
+  position: relative;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #5c584c;
+  user-select: none;
+}
+details.board-options > summary::-webkit-details-marker { display: none; }
+details.board-options > summary::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -5px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--mo-normal) var(--mo-ease);
+}
+details.board-options[open] > summary::before { transform: rotate(45deg); margin-top: -7px; }
+details.board-options > summary:hover { background: rgba(var(--pl-ink), 0.05); }
+details.board-options[open] { padding-bottom: 8px; }
+details.board-options > .board-option { margin: 0 8px 6px; }
+details.board-options[open] > .board-option { animation: mo-pop 280ms var(--mo-ease) backwards; }
+
+.board-option { border-radius: 8px; border-width: 1px; border-left-width: 4px; }
+
+/* 操作ボタン: 塗りつぶしの Fluent ボタン */
+.board-actions .board-btn {
+  min-height: 32px;
+  padding: 4px 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.board-actions .board-btn--approve { background: var(--board-approved); color: #fff; }
+.board-actions .board-btn--approve:hover:not(:disabled) { background: #276e49; }
+.board-actions .board-btn--hold { background: var(--pl-card); border-color: var(--board-hold); color: var(--board-hold); }
+.board-actions .board-btn--hold:hover:not(:disabled) { background: #eef4fb; }
+.board-actions .board-btn--reject { background: var(--pl-card); border-color: #c7c9ce; color: #5d626b; }
+.board-actions .board-btn--reject:hover:not(:disabled) { background: #f3f4f6; }
+
+.board-token { border-radius: 8px; border-left-width: 1px; border-color: var(--pl-card-line); background: var(--pl-card); }
+
+/* ---------------------------------------------------------------- 4. パネル/タイル */
+
+.panel, .view-section, .panel--primary {
+  border: 1px solid var(--pl-card-line);
+  border-top-width: 1px;
+  border-radius: 10px;
+  background: var(--pl-card);
+}
+.view-tile, .stat {
+  border: 1px solid var(--pl-card-line);
+  border-left-width: 4px;
+  border-radius: 8px;
+}
+.view-tile--muted { background: rgba(var(--pl-ink), 0.03); }
+
+/* ---------------------------------------------------------------- 5. チャート(Planner の「グラフ」ビュー風カード) */
+
+/* 見出しの金色の帯を、色付きの丸いチップに。 */
+.view-subtitle::before {
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 3px;
+  vertical-align: 0;
+}
+
+/* 区画ごとに独立した白いカードにする */
+.view-section .view-block {
+  margin-top: 16px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--pl-card-line);
+  border-radius: 10px;
+  background: var(--pl-card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: box-shadow var(--mo-normal) var(--mo-ease), transform var(--mo-normal) var(--mo-ease);
+}
+.view-section .view-block:hover { box-shadow: var(--mo-shadow-8); }
+.view-section .view-block .view-block { margin-top: 12px; padding: 0; border: 0; box-shadow: none; background: none; }
+.view-section .view-block .view-block:hover { box-shadow: none; }
+.view-section .view-split > .view-block { margin-top: 16px; }
+.view-section .view-split { gap: 0 16px; }
+
+/* セクション見出し: 色付きの下線で、いま見ている区画をはっきりさせる */
+.view-head { border-bottom: 1px solid var(--pl-card-line); }
+.view-title { font-size: 19px; }
+
+/* 部署・事業カード: 上端に色の帯 */
+.view-card {
+  border: 1px solid var(--pl-card-line);
+  border-radius: 10px;
+  background: var(--pl-card);
+}
+.view-dept--idle { background: rgba(var(--pl-ink), 0.03); }
+.view-badge { border-radius: 999px; }
+.view-tile-value, .view-stat-value { letter-spacing: -0.01em; }
+
+/* ---------------------------------------------------------------- 6. ドラッグ(置き場の表示) */
+
+.board-card--draggable:active { cursor: grabbing; }
+
+/* ドラッグ中、置ける列の先頭に「ここに置く」の受け皿を出す */
+.board--dragging .board-column[data-column]:not([data-column='pending']) .board-column-body::before {
+  content: 'ここにドロップ';
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  margin-bottom: 4px;
+  border: 2px dashed var(--col);
+  border-radius: 8px;
+  background: rgba(var(--pl-ink), 0.03);
+  color: var(--col);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  animation: mo-slot 260ms var(--mo-ease) backwards;
+}
+.board--dragging .board-column[data-column='approved'] .board-column-body::before { content: '承認として決める'; }
+.board--dragging .board-column[data-column='hold'] .board-column-body::before { content: '保留として決める'; }
+.board--dragging .board-column[data-column='rejected'] .board-column-body::before { content: '見送りとして決める'; }
+.board--dragging .board-column--over .board-column-body::before {
+  min-height: 72px;
+  border-style: solid;
+  background: color-mix(in srgb, var(--col) 14%, transparent);
+  opacity: 1;
+  transition: min-height var(--mo-normal) var(--mo-spring);
+}
+/* 空列の「該当なし」は、受け皿と重複するので隠す */
+.board--dragging .board-column[data-column]:not([data-column='pending']) .board-empty { display: none; }
+
+@keyframes mo-slot { from { opacity: 0; transform: scaleY(0.6); } }
+
+/* ---------------------------------------------------------------- 7. ロック画面 */
+
+body:not(:has(#dashboard:not([hidden]))) .main { padding-top: 10vh; }
+.lock {
+  position: relative;
+  max-width: 440px;
+  padding: 56px 32px 28px;
+  border: 1px solid var(--pl-card-line);
+  border-top: 0;
+  border-radius: 14px;
+  background: var(--pl-card);
+}
+.lock::before {
+  /* 鍵の本体 */
+  content: '';
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  width: 22px;
+  height: 16px;
+  margin-left: -11px;
+  border-radius: 4px;
+  background: var(--gold);
+  box-shadow: 0 6px 14px rgba(222, 177, 67, 0.45);
+}
+.lock::after {
+  /* 鍵のつる。ページを開くと閉じる */
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border: 3px solid var(--gold);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  animation: mo-shackle 700ms var(--mo-spring) 250ms backwards;
+}
+.lock-title { text-align: center; font-size: 20px; }
+.lock-lead { text-align: center; }
+.lock-form .btn { justify-self: stretch; padding: 9px 14px; font-size: 14px; }
+.lock-input { border-radius: 8px; padding: 10px 12px; }
+.lock-input:focus { outline: none; border-color: var(--gold-dark); box-shadow: 0 0 0 3px rgba(222, 177, 67, 0.3); }
+.message:not(:empty) { animation: mo-shake 420ms var(--mo-ease) 1; }
+.message:empty { display: none; }
+
+@keyframes mo-shackle { from { transform: translateY(-7px) rotate(-14deg); } 55% { transform: translateY(1px); } }
+@keyframes mo-shake {
+  20% { transform: translateX(-6px); } 40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); } 80% { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lock::after, .message:not(:empty), .board--dragging .board-column .board-column-body::before { animation: none; }
+}
+
+/* 狭い画面はナビなし。ヘッダは折り返してよい */
+@media (max-width: 1099px) {
+  .site-header { position: sticky; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

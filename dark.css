@@ -1,0 +1,117 @@
+/* dashboard/dark.css — ダークテーマ。<html data-theme="dark"> のときだけ効く。
+ * 色変数を差し替え、直書きの色だけを個別に上書きする。 */
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --gold: #e2b84d;
+  --gold-dark: #e6bd55;
+  --gold-pale: rgba(226, 184, 77, 0.14);
+  --text: #d6d2c6;
+  --heading: #f5f0e4;
+  --surface: #27251f;
+  --line: #3d3a31;
+  --muted: #a39e90;
+  --ok: #4fc083;
+  --warn: #ff8f80;
+  --danger: #ef7b6c;
+  --bg: #1e1c17;
+
+  --c1: #e2b84d;
+  --c2: #5aa6dc;
+  --c3: #4fc083;
+  --c4: #e0726f;
+  --c5: #a58ac8;
+  --c6: #ee9455;
+  --c7: #62c0d8;
+  --c8: #9a9a9a;
+
+
+  --pl-ink: 255, 250, 235;
+  --pl-bar: #0f0e0b;
+  --pl-canvas: #14130f;
+  --pl-card: #1e1c17;
+  --mo-canvas: #14130f;
+  --mo-shadow-4: 0 0 2px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.45);
+  --mo-shadow-8: 0 0 2px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.45);
+  --mo-shadow-16: 0 0 2px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.5);
+  --mo-shadow-28: 0 0 8px rgba(0, 0, 0, 0.5), 0 14px 28px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme='dark'] body { background: var(--pl-canvas); }
+html[data-theme='dark'].mo-on body::before { opacity: 0.55; }
+
+/* 直書きの薄い背景色 */
+html[data-theme='dark'] .view-tile--warn,
+html[data-theme='dark'] .view-stat--warn,
+html[data-theme='dark'] .view-alert,
+html[data-theme='dark'] .board-notice--error,
+html[data-theme='dark'] .board-options-missing { background: rgba(239, 123, 108, 0.12); }
+html[data-theme='dark'] .board-notice--ok { background: rgba(79, 192, 131, 0.12); }
+html[data-theme='dark'] .board-badge--awaiting,
+html[data-theme='dark'] .board-awaiting-note { background: rgba(226, 184, 77, 0.16); color: #f2dc9a; border-color: rgba(226, 184, 77, 0.5); }
+html[data-theme='dark'] .chart-hbar-track { fill: rgba(255, 250, 235, 0.1); }
+html[data-theme='dark'] .view-tile--muted { background: rgba(255, 250, 235, 0.04); }
+
+/* ボード */
+html[data-theme='dark'] .board-card-id,
+html[data-theme='dark'] .board-meta-name,
+html[data-theme='dark'] .board-options-title,
+html[data-theme='dark'] .board-option-empty,
+html[data-theme='dark'] .board-readonly,
+html[data-theme='dark'] .board-column-hint,
+html[data-theme='dark'] .board-link--none,
+html[data-theme='dark'] .board-empty { color: var(--muted); }
+html[data-theme='dark'] details.board-options > summary { color: var(--muted); }
+html[data-theme='dark'] .board-label { background: rgba(226, 184, 77, 0.2); color: #f2dc9a; }
+html[data-theme='dark'] .board-badge--recommended,
+html[data-theme='dark'] .board-btn--primary { color: #231c05; }
+html[data-theme='dark'] .board-option-name { background: rgba(255, 250, 235, 0.08); color: var(--text); }
+html[data-theme='dark'] .board-option-row--cost .board-option-name { background: rgba(111, 166, 227, 0.2); color: #b7d4f3; }
+html[data-theme='dark'] .board-option-row--effect .board-option-name { background: rgba(79, 192, 131, 0.2); color: #a9e2c3; }
+html[data-theme='dark'] .board-option-row--risk .board-option-name { background: rgba(239, 123, 108, 0.2); color: #f6b4ab; }
+html[data-theme='dark'] .board-deadline--urgent { background: rgba(227, 165, 72, 0.22); color: #f3c47c; }
+html[data-theme='dark'] .board-deadline--overdue { background: rgba(239, 123, 108, 0.22); color: #f6a79d; }
+html[data-theme='dark'] .board-actions .board-btn--hold { background: transparent; }
+html[data-theme='dark'] .board-actions .board-btn--hold:hover:not(:disabled) { background: rgba(111, 166, 227, 0.15); }
+html[data-theme='dark'] .board-actions .board-btn--reject { background: transparent; border-color: var(--line); color: var(--text); }
+html[data-theme='dark'] .board-actions .board-btn--reject:hover:not(:disabled) { background: rgba(255, 250, 235, 0.08); }
+html[data-theme='dark'] .board-actions .board-btn--approve { color: #0f2a1c; }
+html[data-theme='dark'] .board-actions .board-btn--approve:hover:not(:disabled) { background: #66cc95; }
+html[data-theme='dark'] .board-column-count { color: var(--heading); }
+html[data-theme='dark'] .board-btn:hover { background: var(--gold-pale); }
+html[data-theme='dark'] .board-overlay { background: rgba(0, 0, 0, 0.62); }
+html[data-theme='dark'] .board-dialog { background: var(--bg); }
+html[data-theme='dark'] .board-token-input,
+html[data-theme='dark'] .board-reason,
+html[data-theme='dark'] .lock-input { background: var(--surface); color: var(--heading); border-color: var(--line); }
+
+/* ナビ・チップ・入力 */
+html[data-theme='dark'] .side-nav { border-right-color: var(--line); }
+html[data-theme='dark'] .side-nav a.is-active { background: rgba(226, 184, 77, 0.18); }
+html[data-theme='dark'] .view-badge:not(.view-badge--ok):not(.view-badge--warn) { background: var(--surface); }
+html[data-theme='dark'] .btn--primary { color: #231c05; }
+html[data-theme='dark'] .chart-legend-item:hover,
+html[data-theme='dark'] .view-model-row:hover { background: rgba(226, 184, 77, 0.14); }
+html[data-theme='dark'] .site-header .btn--ghost { color: var(--pl-bar-text); }
+html[data-theme='dark'] ::selection { background: rgba(226, 184, 77, 0.35); }
+
+/* .board は自分で色変数を定義しているため、html ではなく .board 側で上書きする */
+html[data-theme='dark'] .board {
+  --board-pending: #e3a548;
+  --board-approved: #4fc083;
+  --board-hold: #6fa6e3;
+  --board-rejected: #a0a6b0;
+  --board-a: #4fc083;
+  --board-b: #6fa6e3;
+  --board-c: #b497d6;
+  --board-bad: #ef7b6c;
+}
+
+/* 金色・緑の地に載る文字は、暗い色にする */
+html[data-theme='dark'] .chart-step--done .chart-step-marker,
+html[data-theme='dark'] .view-kv-extra,
+html[data-theme='dark'] .view-badge--ok,
+html[data-theme='dark'] .view-badge--warn { color: #1b1604; }
+html[data-theme='dark'] .chart-step--current .chart-step-marker { background: var(--bg); color: var(--gold); }
+html[data-theme='dark'] .board-btn--hold { color: var(--board-hold); }

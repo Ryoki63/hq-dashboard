@@ -1,4 +1,4 @@
-/* dashboard/style.css — ゴールド基調・影なし・グラデーションなし */
+/* dashboard/style.css — ゴールド基調（質感と動きは motion.css / planner.css） */
 
 :root {
   --gold: #DEB143;

@@ -154,9 +154,11 @@ function rowKind(name) {
   return 'risk';
 }
 
-function renderOptionList(decision) {
+function renderOptionList(decision, open = true) {
   const options = normalizeOptions(decision);
-  const wrap = el('div', 'board-options');
+  // 案の比較は折りたたみ(details)。判断待ちは開き、決定済みは閉じてカードを短く保つ。
+  const wrap = el('details', 'board-options');
+  if (open) wrap.setAttribute('open', '');
   if (options.length === 0 || !hasOptionDetails(decision)) {
     wrap.append(el('p', 'board-options-missing', NO_DETAIL_TEXT));
     // 記号だけ(A/B/C)は出さない。意味のある文字列だけ補足する。
@@ -166,7 +168,7 @@ function renderOptionList(decision) {
     if (labels.length > 0) wrap.append(el('p', 'board-options-labels', `案の名前: ${labels.join(' / ')}`));
     return wrap;
   }
-  wrap.append(el('h4', 'board-options-title', '案の比較(費用・効果・リスク)'));
+  wrap.append(el('summary', 'board-options-title', '案の比較(費用・効果・リスク)'));
   options.forEach((opt, index) => {
     const info = describeOption(opt);
     const card = el('div', optionClass(opt, index));
@@ -421,7 +423,7 @@ export function renderBoard(host, decisions, ctx = {}) {
       );
     }
 
-    card.append(renderOptionList(d));
+    card.append(renderOptionList(d, d.status === 'pending'));
     if (isText(d.recommendation)) {
       const rec = el('p', 'board-card-recommendation');
       rec.append(el('span', 'board-label', 'HQ の推奨'), document.createTextNode(d.recommendation));

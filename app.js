@@ -8,6 +8,8 @@
 
 import { DecryptionError, decryptEnvelope } from './crypto.js';
 import { renderBoard, TOKEN_KEY } from './board.js';
+import { enhance as enhanceMotion, disable as disableMotion } from './motion.js';
+import { initTheme } from './theme.js';
 import {
   renderKpiTiles,
   renderPhaseSection,
@@ -996,10 +998,12 @@ function showDashboard(data) {
   renderDashboard(data);
   renderHeader(data);
   startClock();
+  enhanceMotion(dashboard);
 }
 
 function lock() {
   stopClock();
+  disableMotion();
   safeStorageRemove(PASS_STORAGE_KEY);
   safeStorageRemove(TOKEN_KEY);
   state.data = null;
@@ -1074,6 +1078,7 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   state.demo = params.get('demo') === '1';
 
+  initTheme($('#theme-button'));
   const lockForm = $('#lock-form');
   if (lockForm) lockForm.addEventListener('submit', handleUnlock);
   const lockButton = $('#lock-button');

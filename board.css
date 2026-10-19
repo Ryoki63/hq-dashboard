@@ -1,4 +1,4 @@
-/* dashboard/board.css — 判断かんばん。クラスはすべて board- で始める。影・グラデーションは使わない。 */
+/* dashboard/board.css — 判断かんばん。クラスはすべて board- で始める。 */
 
 .board {
   --board-pending: #b7791f;

@@ -9,6 +9,9 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="views.css">
 <link rel="stylesheet" href="board.css">
+<link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="planner.css">
+<link rel="stylesheet" href="dark.css">
 </head>
 <body>
 <header class="site-header">
@@ -17,8 +20,24 @@
     <p class="site-sub">オーナー専用</p>
   </div>
   <div class="header-meta" id="header-meta" aria-live="polite"></div>
+  <button type="button" class="btn btn--ghost" id="theme-button" aria-pressed="false">ダーク</button>
   <button type="button" class="btn btn--ghost" id="lock-button" hidden>ロック</button>
 </header>
+
+<nav class="side-nav" aria-label="セクション">
+  <p class="side-nav-title">ダッシュボード</p>
+  <a href="#kpis">ひと目で見る状況</a>
+  <a href="#decisions-panel">判断ボード</a>
+  <a href="#phase">全体フェーズ</a>
+  <a href="#agents">部署別の稼動</a>
+  <a href="#models">モデル別の稼動</a>
+  <a href="#finance">費用</a>
+  <a href="#apps-panel">事業</a>
+  <a href="#tasks-panel">タスク</a>
+  <a href="#connections-panel">接続</a>
+  <a href="#ops-panel">実行系の健康状態</a>
+  <a href="#reports-panel">日報・学び</a>
+</nav>
 
 <main class="main">
   <section class="lock" id="lock-screen" aria-labelledby="lock-title" hidden>

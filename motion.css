@@ -1,0 +1,567 @@
+/* dashboard/motion.css — モーションと質感のレイヤー（最後に読み込む）
+ *
+ * 元の配色（ゴールド基調）と DOM は変えない。ここで足すのは:
+ *   - Microsoft Fluent 2 の標準値: 角丸 8px / 影 4・8・16 / 減速イージング / 100〜400ms
+ *   - 入場アニメーション、ホバーの浮き、ポインタ追従のスポットライト
+ *   - かんばんのドラッグ表現、ダイアログの出現
+ * 動きは html.mo-on のときだけ有効（motion.js が付ける）。JS が無い・動きを減らす設定なら素の見た目のまま。
+ *
+ * 以前の「影なし・グラデーションなし」は資料（PPTX）向けの規約。操作する画面は、
+ * Planner / Fluent と同じく奥行き（影）で「触れるもの」を示す。
+ */
+
+:root {
+  --mo-ease: cubic-bezier(0, 0, 0, 1); /* Fluent curveDecelerateMid */
+  --mo-ease-max: cubic-bezier(0.1, 0.9, 0.2, 1); /* curveDecelerateMax */
+  --mo-ease-inout: cubic-bezier(0.33, 0, 0.67, 1); /* curveEasyEase */
+  --mo-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mo-fast: 150ms;
+  --mo-normal: 200ms;
+  --mo-slow: 400ms;
+  --mo-r: 8px;
+  --mo-shadow-4: 0 0 2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.14);
+  --mo-shadow-8: 0 0 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.14);
+  --mo-shadow-16: 0 0 2px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.14);
+  --mo-shadow-28: 0 0 8px rgba(0, 0, 0, 0.12), 0 14px 28px rgba(0, 0, 0, 0.18);
+  --mo-canvas: #f6f5f2;
+}
+
+/* ---------------------------------------------------------------- 土台・質感 */
+
+body {
+  background: var(--mo-canvas);
+}
+
+/* ゆっくり漂う金色の光。読みやすさのため極めて薄く。 */
+html.mo-on body::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 35% at 15% 10%, rgba(222, 177, 67, 0.16), transparent 70%),
+    radial-gradient(35% 30% at 85% 20%, rgba(47, 125, 181, 0.08), transparent 70%),
+    radial-gradient(40% 35% at 60% 95%, rgba(54, 160, 100, 0.07), transparent 70%);
+  animation: mo-drift 28s var(--mo-ease-inout) infinite alternate;
+}
+
+.site-header {
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  backdrop-filter: saturate(160%) blur(14px);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+  box-shadow: var(--mo-shadow-4);
+  transition: box-shadow var(--mo-normal) var(--mo-ease);
+}
+
+.site-title {
+  position: relative;
+}
+
+html.mo-on .site-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gold);
+  transform-origin: left;
+  animation: mo-underline 900ms var(--mo-ease) 150ms backwards;
+}
+
+/* スクロール進捗（画面上端） */
+.mo-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 3px;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--gold), var(--gold-dark));
+  transform-origin: left;
+  transform: scaleX(var(--mo-progress, 0));
+  transition: transform 80ms linear;
+}
+
+/* ---------------------------------------------------------------- パネル */
+
+.panel,
+.view-section {
+  border-radius: var(--mo-r);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: var(--mo-shadow-4);
+  transition: box-shadow var(--mo-slow) var(--mo-ease);
+}
+
+.panel:hover,
+.view-section:hover {
+  box-shadow: var(--mo-shadow-8);
+}
+
+.view-title,
+.panel-title {
+  letter-spacing: 0.02em;
+}
+
+/* 見出しの金の短い線が、入場に合わせて伸びる */
+html.mo-on .view-head,
+html.mo-on .panel-head {
+  position: relative;
+}
+
+html.mo-on .mo-in > .view-head::after,
+html.mo-on .mo-in > .panel-head::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 64px;
+  height: 2px;
+  background: var(--gold);
+  transform-origin: left;
+  animation: mo-underline 700ms var(--mo-ease) calc(var(--mo-delay, 0ms) + 200ms) backwards;
+}
+
+/* ---------------------------------------------------------------- 入場 */
+
+html.mo-on .mo-reveal:not(.mo-in) {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+html.mo-on .mo-reveal.mo-in {
+  animation: mo-rise var(--mo-slow) var(--mo-ease) var(--mo-delay, 0ms) backwards;
+}
+
+/* 並びの要素は 45ms ずつずらして登場 */
+html.mo-on .mo-reveal:not(.mo-in) .mo-item {
+  opacity: 0;
+}
+
+html.mo-on .mo-reveal.mo-in .mo-item {
+  animation: mo-pop 460ms var(--mo-ease) calc(var(--mo-delay, 0ms) + 140ms + var(--i, 0) * 45ms) backwards;
+}
+
+/* ---------------------------------------------------------------- カードの質感・ホバー・スポットライト */
+
+.view-tile,
+.view-card,
+.board-card,
+.dept-card,
+.app,
+.kanban-col,
+.stat,
+.view-block {
+  position: relative;
+  border-radius: var(--mo-r);
+  transition:
+    transform var(--mo-normal) var(--mo-ease),
+    box-shadow var(--mo-normal) var(--mo-ease),
+    border-color var(--mo-normal) var(--mo-ease),
+    background-color var(--mo-normal) var(--mo-ease);
+}
+
+.view-tile,
+.view-card,
+.dept-card,
+.app,
+.stat {
+  box-shadow: var(--mo-shadow-4);
+}
+
+.view-tile:hover,
+.view-card:hover,
+.dept-card:hover,
+.app:hover,
+.stat:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--mo-shadow-16);
+}
+
+.kanban-col:hover {
+  box-shadow: var(--mo-shadow-8);
+}
+
+/* ポインタに追従するハイライト（Fluent の Reveal） */
+.view-tile::after,
+.view-card::after,
+.board-card::after,
+.dept-card::after,
+.app::after,
+.kanban-col::after,
+.stat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(180px circle at var(--mx, 50%) var(--my, 50%), rgba(222, 177, 67, 0.2), transparent 65%);
+  transition: opacity var(--mo-normal) var(--mo-ease);
+}
+
+.view-tile:hover::after,
+.view-card:hover::after,
+.board-card:hover::after,
+.dept-card:hover::after,
+.app:hover::after,
+.kanban-col:hover::after,
+.stat:hover::after {
+  opacity: 1;
+}
+
+/* 数字は桁が変わっても揺れないように */
+.view-tile-value,
+.view-stat-value,
+.chart-donut-value,
+.view-dept-runs-num,
+.board-column-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- 図表 */
+
+.chart-donut-segment,
+.chart-gauge-fill,
+.chart-line-path,
+.chart-spark-line {
+  transition: stroke-width var(--mo-normal) var(--mo-ease), opacity var(--mo-normal) var(--mo-ease);
+}
+
+.chart-donut:hover .chart-donut-segment {
+  opacity: 0.55;
+}
+
+.chart-donut .chart-donut-segment:hover {
+  opacity: 1;
+}
+
+.chart-hbar-fill {
+  transition: filter var(--mo-normal) var(--mo-ease);
+}
+
+.chart-hbar:hover .chart-hbar-fill,
+.view-model-row:hover .chart-hbar-fill {
+  filter: brightness(1.08) saturate(1.15);
+}
+
+.chart-legend-item,
+.view-model-row {
+  border-radius: 6px;
+  transition: background-color var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+
+.chart-legend-item:hover,
+.view-model-row:hover {
+  background: rgba(222, 177, 67, 0.12);
+  transform: translateX(3px);
+}
+
+.chart-step--current::before {
+  animation: mo-ring 2s var(--mo-ease-inout) infinite;
+}
+
+/* ---------------------------------------------------------------- ボタン・入力 */
+
+.btn,
+.board-btn {
+  border-radius: 6px;
+  transition:
+    transform var(--mo-fast) var(--mo-ease),
+    box-shadow var(--mo-fast) var(--mo-ease),
+    background-color var(--mo-fast) var(--mo-ease);
+}
+
+.btn:hover:not(:disabled),
+.board-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--mo-shadow-8);
+}
+
+.btn:active:not(:disabled),
+.board-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: var(--mo-shadow-4);
+  transition-duration: 60ms;
+}
+
+.lock-input,
+.board-token-input {
+  border-radius: 6px;
+  transition: border-color var(--mo-normal) var(--mo-ease), box-shadow var(--mo-normal) var(--mo-ease);
+}
+
+.lock-input:focus,
+.board-token-input:focus {
+  outline: none;
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 3px rgba(222, 177, 67, 0.35);
+}
+
+/* ロック画面 */
+.lock {
+  border-radius: var(--mo-r);
+  box-shadow: var(--mo-shadow-16);
+  animation: mo-pop 520ms var(--mo-ease) backwards;
+}
+
+/* ---------------------------------------------------------------- かんばん（判断ボード） */
+
+.board-column {
+  border-radius: var(--mo-r);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: var(--mo-shadow-4);
+  transition:
+    background-color var(--mo-normal) var(--mo-ease),
+    border-color var(--mo-normal) var(--mo-ease),
+    box-shadow var(--mo-normal) var(--mo-ease),
+    transform var(--mo-normal) var(--mo-ease);
+}
+
+.board-card {
+  box-shadow: var(--mo-shadow-4);
+  border-radius: var(--mo-r);
+}
+
+.board-card:hover {
+  box-shadow: var(--mo-shadow-8);
+}
+
+.board-card--draggable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mo-shadow-16);
+}
+
+.board-card--draggable:active {
+  cursor: grabbing;
+}
+
+/* 描き直し（列の移動・反映）のたびに、カードがふわっと着地する */
+html.mo-on .board-card {
+  animation: mo-land 420ms var(--mo-spring) backwards;
+}
+
+/* つかんでいる間: 少し傾いて持ち上がる */
+.board-card--dragging {
+  opacity: 0.55;
+  transform: rotate(-2.5deg) scale(1.03);
+  box-shadow: var(--mo-shadow-28);
+}
+
+/* ドラッグ中は、置ける列が呼吸するように光る */
+.board--dragging .board-column[data-column]:not([data-column='pending']) {
+  border: 2px dashed var(--col);
+  background: var(--pl-card, #fff);
+  animation: mo-drop-hint 1.2s var(--mo-ease-inout) infinite;
+}
+
+.board .board-column--over {
+  transform: scale(1.015);
+  box-shadow: var(--mo-shadow-16);
+  animation: none;
+}
+
+.board-column-count {
+  transition: transform var(--mo-normal) var(--mo-spring);
+}
+
+html.mo-on .board-column-count {
+  animation: mo-badge 520ms var(--mo-spring) 300ms backwards;
+}
+
+.board-badge--recommended {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 「推奨」バッジを光が横切る */
+html.mo-on .board-badge--recommended::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: mo-shine 3.6s var(--mo-ease-inout) 1s infinite;
+}
+
+html.mo-on .board-deadline--urgent,
+html.mo-on .board-deadline--overdue {
+  animation: mo-blink 1.8s var(--mo-ease-inout) infinite;
+}
+
+.board-notice:not(.board-notice--empty) {
+  animation: mo-pop 320ms var(--mo-ease) backwards;
+}
+
+/* ダイアログ */
+.board-overlay {
+  background: rgba(30, 25, 10, 0.5);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: mo-fade 200ms var(--mo-ease) backwards;
+}
+
+.board-dialog {
+  border-radius: 12px;
+  box-shadow: var(--mo-shadow-28);
+  animation: mo-dialog 380ms var(--mo-spring) backwards;
+}
+
+/* 案A/B/C のカード */
+.board-option {
+  border-radius: 6px;
+  transition: transform var(--mo-normal) var(--mo-ease), box-shadow var(--mo-normal) var(--mo-ease);
+}
+
+.board-option:hover {
+  transform: translateX(3px);
+  box-shadow: var(--mo-shadow-8);
+}
+
+/* ---------------------------------------------------------------- 警告・ヘッダ */
+
+.warn-band {
+  border-radius: var(--mo-r);
+  box-shadow: var(--mo-shadow-4);
+}
+
+html.mo-on .header-item--warn {
+  animation: mo-blink 2.4s var(--mo-ease-inout) infinite;
+}
+
+/* ---------------------------------------------------------------- keyframes */
+
+@keyframes mo-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes mo-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+}
+
+@keyframes mo-land {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+}
+
+@keyframes mo-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mo-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.94);
+  }
+}
+
+@keyframes mo-badge {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@keyframes mo-underline {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes mo-shine {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes mo-blink {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes mo-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 2%, 0) scale(1.06);
+  }
+}
+
+@keyframes mo-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(222, 177, 67, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(222, 177, 67, 0);
+  }
+}
+
+@keyframes mo-drop-hint {
+  50% {
+    box-shadow: 0 0 0 4px rgba(222, 177, 67, 0.3);
+  }
+}
+
+/* ---------------------------------------------------------------- 動きを減らす設定・印刷 */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .mo-progress {
+    display: none;
+  }
+}
+
+@media print {
+  html.mo-on .mo-reveal:not(.mo-in),
+  html.mo-on .mo-reveal:not(.mo-in) .mo-item {
+    opacity: 1;
+    transform: none;
+  }
+  html.mo-on body::before,
+  .mo-progress {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .site-header {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .view-tile:hover,
+  .view-card:hover,
+  .dept-card:hover,
+  .app:hover,
+  .stat:hover {
+    transform: none;
+  }
+}
