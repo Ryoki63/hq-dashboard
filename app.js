@@ -7,6 +7,14 @@
 //  - パスフレーズは sessionStorage だけに置く（タブを閉じると消える）。
 
 import { DecryptionError, decryptEnvelope } from './crypto.js';
+import { renderBoard, TOKEN_KEY } from './board.js';
+import {
+  renderKpiTiles,
+  renderPhaseSection,
+  renderAgentsSection,
+  renderModelsSection,
+  renderFinanceSection,
+} from './views.js';
 import {
   deadlineLevel,
   deptLabel,
@@ -249,66 +257,35 @@ function renderWarnings(data) {
   return band;
 }
 
-function renderDecisionCard(decision) {
-  const level = deadlineLevel(decision.deadline);
-  const card = el('article', { class: `decision decision--${level}` });
-
-  const head = el('div', { class: 'decision-head' });
-  head.append(span('chip', decision.id ?? 'DECISION'));
-  const deadline = el('p', { class: `deadline deadline--${level}` });
-  deadline.append(span('deadline-label', '期限'));
-  deadline.append(span('deadline-remaining', formatRemaining(decision.deadline)));
-  if (decision.deadline) deadline.append(span('deadline-at', formatDateTimeJa(decision.deadline)));
-  head.append(deadline);
-  card.append(head);
-
-  card.append(el('h3', { class: 'decision-title', text: decision.title ?? '（タイトル未設定）' }));
-
-  const rows = [];
-  if (decision.default_if_no_reply) rows.push(['無返答のとき', String(decision.default_if_no_reply)]);
-  if (rows.length > 0) card.append(metaList(rows));
-
-  const options = Array.isArray(decision.options) ? decision.options.map(optionText).filter(Boolean) : [];
-  if (options.length > 0) {
-    card.append(el('p', { class: 'section-heading', text: '選択肢' }));
-    const list = el('ul', { class: 'option-list' });
-    for (const option of options) list.append(el('li', { text: option }));
-    card.append(list);
-  }
-
-  if (typeof decision.recommendation === 'string' && decision.recommendation.trim() !== '') {
-    const box = el('div', { class: 'recommendation' });
-    box.append(el('p', { class: 'label', text: '推奨' }));
-    box.append(el('p', { text: decision.recommendation.trim() }));
-    card.append(box);
-  }
-
-  const actions = el('div', { class: 'decision-actions' });
-  const href = safeHref(decision.issue_url);
-  if (href) {
-    actions.append(externalAnchor(href, 'GitHub で返信', 'btn btn--primary'));
-  } else {
-    actions.append(el('span', { class: 'link-warning', text: 'Issue へのリンクが未設定です' }));
-  }
-  card.append(actions);
-
-  appendImage(card, decision.slide_png, '判断カードのスライド');
-  return card;
+function boardStorage() {
+  return {
+    get: safeStorageGet,
+    set: safeStorageSet,
+    remove: safeStorageRemove,
+  };
 }
 
 function renderDecisions(data) {
-  const section = panel('decisions', '判断待ち', '返事が無い場合の扱いまで確認してください');
+  const section = panel('decisions', '判断ボード', 'カードをドラッグして、承認・保留・見送りを決めます');
   section.classList.add('panel--primary');
   const list = Array.isArray(data.decisions) ? data.decisions : [];
   if (list.length === 0) {
     section.append(emptyState('判断待ちはありません。'));
     return section;
   }
-  const grid = el('div', { class: 'card-grid' });
-  for (const decision of list) {
-    if (decision && typeof decision === 'object') grid.append(renderDecisionCard(decision));
+  const host = el('div', { class: 'board-host' });
+  section.append(host);
+  try {
+    renderBoard(host, list, {
+      now: Date.now(),
+      storage: boardStorage(),
+      fetchImpl: (...args) => fetch(...args),
+      onChange: () => {},
+    });
+  } catch {
+    clear(host);
+    host.append(emptyState('判断ボードを表示できませんでした。GitHub の Issue から直接返信してください。'));
   }
-  section.append(grid);
   return section;
 }
 
@@ -869,10 +846,14 @@ function renderDashboard(data) {
 
   const warning = renderWarnings(data);
   if (warning) dash.append(warning);
+  dash.append(renderKpiTiles(data, Date.now()));
   dash.append(renderDecisions(data));
+  dash.append(renderPhaseSection(data, Date.now()));
+  dash.append(renderAgentsSection(data, Date.now()));
+  dash.append(renderModelsSection(data, Date.now()));
+  dash.append(renderFinanceSection(data, Date.now()));
   dash.append(renderApps(data));
   dash.append(renderTasks(data));
-  dash.append(renderFinance(data));
   dash.append(renderConnections(data));
   dash.append(renderOps(data));
   dash.append(renderReports(data));
@@ -962,6 +943,7 @@ function showDashboard(data) {
 function lock() {
   stopClock();
   safeStorageRemove(PASS_STORAGE_KEY);
+  safeStorageRemove(TOKEN_KEY);
   state.data = null;
   const dashboard = $('#dashboard');
   if (dashboard) {

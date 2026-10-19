@@ -1,0 +1,911 @@
+/* dashboard/views.css — v2 の各セクション(view-*)と charts.js の見た目
+   方針: 影なし・グラデーションなし・インライン style なし。ゴールド基調。
+   既存の CSS 変数は fallback 付きで使う。 */
+
+:root {
+  /* データ用パレット(色覚多様性に配慮。凡例とラベルを必ず併記する) */
+  --c1: #DEB143;
+  --c2: #2F7DB5;
+  --c3: #36A064;
+  --c4: #C0504D;
+  --c5: #8064A2;
+  --c6: #E07B39;
+  --c7: #4BACC6;
+  --c8: #7F7F7F;
+  --danger: #C0392B;
+  --muted: #6B6B6B;
+}
+
+/* ---------------------------------------------------------------- section */
+
+.view-section {
+  margin: 0 0 16px;
+  padding: 16px 18px 20px;
+  background: var(--bg, #fff);
+  border: 1px solid var(--line, #BFBFBF);
+  border-top: 4px solid var(--gold, #DEB143);
+  border-radius: var(--radius, 4px);
+  min-width: 0;
+}
+
+.view-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line, #BFBFBF);
+}
+
+.view-title {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.03em;
+  color: var(--heading, #161616);
+}
+
+.view-note,
+.view-subnote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-subhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 10px;
+  margin: 0 0 10px;
+}
+
+.view-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--heading, #161616);
+}
+
+.view-subtitle::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 0.95em;
+  margin-right: 8px;
+  vertical-align: -1px;
+  background: var(--gold, #DEB143);
+}
+
+.view-block {
+  min-width: 0;
+  margin-top: 22px;
+}
+
+.view-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0 28px;
+}
+
+.view-split--wide {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.view-empty {
+  margin: 0;
+  padding: 14px 12px;
+  font-size: 13px;
+  color: var(--muted, #6B6B6B);
+  background: var(--surface, #F4F4F4);
+  border: 1px dashed var(--line, #BFBFBF);
+  border-radius: var(--radius, 4px);
+  text-align: center;
+}
+
+.view-empty--inline {
+  padding: 4px 0;
+  font-size: 12px;
+  text-align: left;
+  background: none;
+  border: 0;
+}
+
+.view-footnote {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-notice {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--gold-pale, #FBF3DE);
+  border-left: 4px solid var(--gold, #DEB143);
+}
+
+.view-okline {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ok, #36A064);
+}
+
+.view-okline::before {
+  content: "✓ ";
+  font-weight: 700;
+}
+
+.view-big {
+  margin: 8px 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--heading, #161616);
+}
+
+/* ---------------------------------------------------------------- KPI tiles */
+
+.view-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.view-tile {
+  min-width: 0;
+  padding: 12px 14px 12px;
+  background: var(--bg, #fff);
+  border: 1px solid var(--line, #BFBFBF);
+  border-left: 6px solid var(--gold, #DEB143);
+  border-radius: var(--radius, 4px);
+}
+
+.view-tile--accent { border-left-color: var(--gold, #DEB143); }
+.view-tile--ok { border-left-color: var(--c3); }
+.view-tile--warn {
+  border-left-color: var(--danger, #C0392B);
+  background: #FDF1EF;
+}
+.view-tile--muted {
+  border-left-color: var(--line, #BFBFBF);
+  background: var(--surface, #F4F4F4);
+}
+
+.view-tile-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-tile-value {
+  margin: 4px 0 2px;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--heading, #161616);
+  overflow-wrap: anywhere;
+}
+
+.view-tile-value--text {
+  font-size: 22px;
+}
+
+.view-tile--warn .view-tile-value {
+  color: var(--danger, #C0392B);
+}
+
+.view-tile--muted .view-tile-value {
+  font-size: 22px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-tile-sub {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text, #3F3F3F);
+}
+
+/* ---------------------------------------------------------------- phase */
+
+.view-stepper {
+  margin: 4px 0 18px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.chart-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 640px;
+}
+
+.chart-step {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted, #6B6B6B);
+}
+
+.chart-step::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: -50%;
+  width: 100%;
+  height: 3px;
+  background: var(--line, #BFBFBF);
+  z-index: 0;
+}
+
+.chart-step:first-child::before {
+  display: none;
+}
+
+.chart-step--done::before,
+.chart-step--current::before {
+  background: var(--gold, #DEB143);
+}
+
+.chart-step-marker {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--line, #BFBFBF);
+  background: var(--bg, #fff);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chart-step--done .chart-step-marker {
+  background: var(--gold, #DEB143);
+  border-color: var(--gold, #DEB143);
+  color: var(--heading, #161616);
+}
+
+.chart-step--current .chart-step-marker {
+  width: 38px;
+  height: 38px;
+  margin: -3px 0;
+  background: var(--heading, #161616);
+  border-color: var(--gold, #DEB143);
+  border-width: 4px;
+  color: var(--gold, #DEB143);
+}
+
+.chart-step--current {
+  color: var(--heading, #161616);
+  font-weight: 700;
+}
+
+.chart-step--current .chart-step-label {
+  padding: 1px 8px;
+  background: var(--gold-pale, #FBF3DE);
+  border-bottom: 3px solid var(--gold, #DEB143);
+}
+
+.chart-step-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.view-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 20px;
+  margin: 0;
+}
+
+.view-kv-row {
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--surface, #F4F4F4);
+  border-radius: var(--radius, 4px);
+}
+
+.view-kv-key {
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-kv-val {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--heading, #161616);
+  overflow-wrap: anywhere;
+}
+
+.view-kv-extra {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--gold, #DEB143);
+  color: var(--heading, #161616);
+  border-radius: 10px;
+}
+
+.view-gate {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: var(--gold-pale, #FBF3DE);
+  border-left: 4px solid var(--gold, #DEB143);
+}
+
+.view-gate-text {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.view-fallback {
+  padding: 12px 14px;
+  background: var(--surface, #F4F4F4);
+  border-radius: var(--radius, 4px);
+  margin-bottom: 14px;
+}
+
+.view-fallback-label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-fallback-value {
+  margin: 2px 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--heading, #161616);
+}
+
+/* ---------------------------------------------------------------- dept cards */
+
+.view-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.view-card {
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg, #fff);
+  border: 1px solid var(--line, #BFBFBF);
+  border-radius: var(--radius, 4px);
+}
+
+.view-dept--idle {
+  background: var(--surface, #F4F4F4);
+}
+
+.view-dept--idle .view-dept-runs-num {
+  color: var(--muted, #6B6B6B);
+}
+
+.view-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.view-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.view-dot {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c8);
+}
+
+.view-bg1 { background: var(--c1); }
+.view-bg2 { background: var(--c2); }
+.view-bg3 { background: var(--c3); }
+.view-bg4 { background: var(--c4); }
+.view-bg5 { background: var(--c5); }
+.view-bg6 { background: var(--c6); }
+.view-bg7 { background: var(--c7); }
+.view-bg8 { background: var(--c8); }
+
+.view-badge {
+  display: inline-block;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: var(--text, #3F3F3F);
+  background: var(--surface, #F4F4F4);
+  border: 1px solid var(--line, #BFBFBF);
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.view-badge--ok {
+  color: #fff;
+  background: var(--c3);
+  border-color: var(--c3);
+}
+
+.view-badge--warn {
+  color: var(--heading, #161616);
+  background: var(--gold, #DEB143);
+  border-color: var(--gold-dark, #B8860B);
+}
+
+.view-dept-runs {
+  margin: 6px 0 0;
+  line-height: 1.2;
+}
+
+.view-dept-runs-num {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--heading, #161616);
+}
+
+.view-dept-runs-unit {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-dept-idle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-dept-result {
+  display: flex;
+  gap: 12px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.view-ok { color: var(--c3); }
+.view-fail { color: var(--danger, #C0392B); }
+
+.view-chart {
+  min-width: 0;
+}
+
+.view-chart--bar {
+  margin-top: 8px;
+}
+
+.view-chart svg {
+  max-width: 100%;
+}
+
+.view-heat {
+  margin-top: 8px;
+}
+
+.view-chart--heat {
+  overflow: hidden;
+}
+
+.view-chart--heat svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.view-heat-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: 10px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-dept-foot {
+  margin: 8px 0 0;
+  padding-top: 6px;
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+  border-top: 1px solid var(--surface, #F4F4F4);
+}
+
+/* ---------------------------------------------------------------- donut + legend */
+
+.view-donut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+}
+
+.view-chart--donut {
+  flex: none;
+}
+
+.chart-donut {
+  display: block;
+}
+
+.chart-donut-segment {
+  stroke-linecap: butt;
+}
+
+.chart-legend {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-legend-item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0 8px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--surface, #F4F4F4);
+}
+
+.chart-legend-swatch {
+  align-self: center;
+}
+
+.chart-legend-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text, #3F3F3F);
+}
+
+.chart-legend-value {
+  font-weight: 700;
+  color: var(--heading, #161616);
+  text-align: right;
+}
+
+.chart-legend-pct {
+  min-width: 3.2em;
+  font-size: 12px;
+  text-align: right;
+  color: var(--muted, #6B6B6B);
+}
+
+/* ---------------------------------------------------------------- hbar */
+
+.chart-hbar {
+  display: grid;
+  gap: 8px;
+}
+
+.chart-hbar-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 30%) minmax(60px, 1fr) minmax(56px, auto);
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 13px;
+}
+
+.chart-hbar-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.chart-hbar-sub {
+  font-size: 11px;
+  color: var(--muted, #6B6B6B);
+}
+
+.chart-hbar-bar {
+  display: block;
+  width: 100%;
+  height: 12px;
+}
+
+.chart-hbar-value {
+  font-weight: 700;
+  text-align: right;
+  color: var(--heading, #161616);
+  white-space: nowrap;
+}
+
+.chart-hbar-row--warn .chart-hbar-value {
+  color: var(--danger, #C0392B);
+}
+
+.view-card .chart-hbar-row {
+  grid-template-columns: 2.4em minmax(0, 1fr) auto;
+}
+
+/* ---------------------------------------------------------------- line / gauge */
+
+.view-chart--line svg,
+.view-chart--gauge svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.view-chart--gauge {
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+.chart-hbar-track {
+  fill: #ECECEC;
+}
+
+.chart-legend {
+  max-width: 560px;
+}
+
+/* ヒートストリップの目盛りは位置(0〜18)で「何時間前」と読めて紛らわしいため、下の軸ラベルに任せる */
+.chart-heat-tick {
+  display: none;
+}
+
+.view-chart--heat svg {
+  margin-bottom: -12px;
+}
+
+.chart-line-path {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-line-ref {
+  stroke-dasharray: 5 4;
+}
+
+.chart-gauge-fill {
+  stroke-linecap: butt;
+}
+
+/* ---------------------------------------------------------------- models */
+
+.view-alert {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: #FDF1EF;
+  border: 1px solid var(--danger, #C0392B);
+  border-left-width: 6px;
+  border-radius: var(--radius, 4px);
+}
+
+.view-alert-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--danger, #C0392B);
+}
+
+.view-alert-title::before {
+  content: "⚠ ";
+}
+
+.view-alert-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.view-alert-item {
+  overflow-wrap: anywhere;
+}
+
+.view-model-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.view-model-row {
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--surface, #F4F4F4);
+  border-radius: var(--radius, 4px);
+}
+
+.view-model-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-model-name {
+  min-width: 0;
+  font-weight: 700;
+  color: var(--heading, #161616);
+  overflow-wrap: anywhere;
+}
+
+.view-model-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.view-model-route {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--muted, #6B6B6B);
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- finance */
+
+.view-equation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.view-op {
+  align-self: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-stat {
+  flex: 1 1 110px;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--surface, #F4F4F4);
+  border-left: 4px solid var(--gold, #DEB143);
+  border-radius: var(--radius, 4px);
+}
+
+.view-stat--ok { border-left-color: var(--c3); }
+.view-stat--warn {
+  border-left-color: var(--danger, #C0392B);
+  background: #FDF1EF;
+}
+.view-stat--muted { border-left-color: var(--line, #BFBFBF); }
+
+.view-stat-label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted, #6B6B6B);
+}
+
+.view-stat-value {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--heading, #161616);
+}
+
+.view-stat--warn .view-stat-value {
+  color: var(--danger, #C0392B);
+}
+
+.view-stat--muted .view-stat-value {
+  color: var(--muted, #6B6B6B);
+}
+
+.view-stat-note {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted, #6B6B6B);
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+@media (max-width: 560px) {
+  .view-section {
+    padding: 12px 12px 16px;
+  }
+
+  .view-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .view-tile-value {
+    font-size: 24px;
+  }
+
+  .view-tile-value--text,
+  .view-tile--muted .view-tile-value {
+    font-size: 18px;
+  }
+
+  .view-stepper {
+    overflow-x: visible;
+  }
+
+  .chart-stepper {
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .chart-step {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    padding: 4px 0;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .chart-step::before {
+    top: -50%;
+    left: 15px;
+    width: 3px;
+    height: 100%;
+  }
+
+  .chart-step--current .chart-step-marker {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+  }
+
+  .view-split,
+  .view-split--wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chart-hbar-row {
+    grid-template-columns: minmax(70px, 34%) minmax(40px, 1fr) auto;
+  }
+
+  .view-donut {
+    justify-content: center;
+  }
+
+  .view-equation {
+    flex-direction: column;
+  }
+
+  .view-op {
+    align-self: flex-start;
+    line-height: 1;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  /* ダークモードは任意。ここでは対応しない(既存 style.css の方針に合わせる)。 */
+}

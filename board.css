@@ -1,0 +1,572 @@
+/* dashboard/board.css — 判断かんばん。クラスはすべて board- で始める。影・グラデーションは使わない。 */
+
+.board {
+  --board-pending: #b7791f;
+  --board-approved: #2f855a;
+  --board-hold: #3b6ea8;
+  --board-rejected: #8a8f98;
+  --board-a: #2f855a;
+  --board-b: #3b6ea8;
+  --board-c: #8a5db0;
+  --board-bad: #c0392b;
+  color: var(--text, #2b2b2b);
+  font-size: 14px;
+  line-height: 1.6;
+  position: relative;
+}
+
+.board *,
+.board *::before,
+.board *::after {
+  box-sizing: border-box;
+}
+
+/* ---------- トークン帯 ---------- */
+.board-token {
+  border: 1px solid var(--line, #e3d9bd);
+  border-left: 4px solid var(--gold, #DEB143);
+  border-radius: var(--radius, 8px);
+  background: var(--gold-pale, #fbf4de);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.board-token-status {
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: var(--heading, #3a2f10);
+}
+.board-token-status--set {
+  color: var(--board-approved);
+}
+.board-token-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.board-token-label {
+  font-weight: 700;
+}
+.board-token-input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line, #cdbf93);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+.board-token-guide {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--text, #5a5440);
+}
+
+/* ---------- 通知 ---------- */
+.board-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line, #ddd);
+  background: var(--surface, #fff);
+  font-weight: 600;
+}
+.board-notice--empty {
+  display: none;
+}
+.board-notice--ok {
+  border-color: var(--board-approved);
+  background: #eef8f1;
+}
+.board-notice--error {
+  border-color: var(--board-bad);
+  background: #fdeeec;
+}
+
+/* ---------- 列 ---------- */
+.board-columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.board-column {
+  --col: var(--board-pending);
+  border: 2px solid transparent;
+  border-top: 5px solid var(--col);
+  border-radius: var(--radius, 8px);
+  background: var(--bg, #faf7ee);
+  padding: 10px;
+  min-width: 0;
+}
+.board-column--pending {
+  --col: var(--board-pending);
+}
+.board-column--approved {
+  --col: var(--board-approved);
+}
+.board-column--hold {
+  --col: var(--board-hold);
+}
+.board-column--rejected {
+  --col: var(--board-rejected);
+}
+.board-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.board-column-title {
+  margin: 0;
+  font-size: 16px;
+  color: var(--col);
+}
+.board-column-count {
+  min-width: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--col);
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+}
+.board-column-hint {
+  margin: 2px 0 10px;
+  font-size: 12px;
+  color: #6b6757;
+}
+.board-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 48px;
+}
+.board-empty {
+  margin: 0;
+  padding: 14px 0;
+  text-align: center;
+  color: #8a8570;
+}
+/* ドラッグ中: ドロップできる列を示す */
+.board--dragging .board-column--approved,
+.board--dragging .board-column--hold,
+.board--dragging .board-column--rejected {
+  border: 2px dashed var(--col);
+  background: var(--surface, #fff);
+}
+.board .board-column--over {
+  border: 2px solid var(--col);
+  background: var(--gold-pale, #fbf4de);
+}
+
+/* ---------- カード ---------- */
+.board-card {
+  border: 1px solid var(--line, #e3d9bd);
+  border-left: 5px solid var(--col, var(--board-pending));
+  border-radius: var(--radius, 8px);
+  background: var(--surface, #fff);
+  padding: 10px 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.board-card--pending {
+  border-left-color: var(--board-pending);
+}
+.board-card--approved {
+  border-left-color: var(--board-approved);
+}
+.board-card--hold {
+  border-left-color: var(--board-hold);
+}
+.board-card--rejected {
+  border-left-color: var(--board-rejected);
+}
+.board-card--draggable {
+  cursor: grab;
+}
+.board-card--dragging {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.board-card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.board-card-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: #6b6757;
+}
+.board-card-title {
+  margin: 2px 0 6px;
+  font-size: 15px;
+  color: var(--heading, #3a2f10);
+}
+.board-card-question,
+.board-card-recommendation {
+  margin: 0 0 8px;
+}
+.board-label {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--gold-pale, #fbf4de);
+  border: 1px solid var(--gold, #DEB143);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--heading, #3a2f10);
+}
+
+.board-meta {
+  margin: 0 0 8px;
+  display: grid;
+  gap: 2px;
+}
+.board-meta-row {
+  display: flex;
+  gap: 8px;
+}
+.board-meta-name {
+  flex: 0 0 6.5em;
+  font-weight: 700;
+  color: #6b6757;
+  font-size: 12.5px;
+}
+.board-meta-text {
+  margin: 0;
+  min-width: 0;
+}
+.board-deadline--urgent {
+  color: var(--warn, #b7791f);
+  font-weight: 700;
+}
+.board-deadline--overdue {
+  color: var(--board-bad);
+  font-weight: 700;
+}
+
+.board-badge {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+.board-badge--recommended {
+  background: var(--gold, #DEB143);
+  color: #2b2208;
+}
+.board-badge--awaiting {
+  background: #fff3cd;
+  border: 1px solid #d9a521;
+  color: #6b4b00;
+}
+.board-awaiting-note {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #fff8e1;
+  font-size: 12.5px;
+}
+
+/* ---------- 案(A/B/C) ---------- */
+.board-options {
+  margin: 0 0 8px;
+  display: grid;
+  gap: 6px;
+}
+.board-options-title {
+  margin: 0;
+  font-size: 12.5px;
+  color: #6b6757;
+}
+.board-options-missing {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--board-bad);
+  border-radius: 6px;
+  background: #fdf3f1;
+  font-weight: 600;
+}
+.board-options-labels {
+  margin: 0;
+  font-size: 12.5px;
+}
+.board-option {
+  --opt: var(--board-a);
+  border: 1px solid var(--opt);
+  border-left: 5px solid var(--opt);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  padding: 6px 8px;
+}
+.board-option--a {
+  --opt: var(--board-a);
+}
+.board-option--b {
+  --opt: var(--board-b);
+}
+.board-option--c {
+  --opt: var(--board-c);
+}
+.board-option--n0 {
+  --opt: var(--board-a);
+}
+.board-option--n1 {
+  --opt: var(--board-b);
+}
+.board-option--n2 {
+  --opt: var(--board-c);
+}
+.board-option-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.board-option-title {
+  font-weight: 700;
+  color: var(--opt);
+}
+.board-option-rows {
+  margin: 0;
+  display: grid;
+  gap: 3px;
+}
+.board-option-row {
+  display: grid;
+  grid-template-columns: 4.2em minmax(0, 1fr);
+  gap: 6px;
+  align-items: baseline;
+}
+.board-option-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 4px;
+  background: #f1ede0;
+  color: #4a4636;
+}
+.board-option-row--cost .board-option-name {
+  background: #e8f0fa;
+  color: #234f7f;
+}
+.board-option-row--effect .board-option-name {
+  background: #e6f4ea;
+  color: #1f6a43;
+}
+.board-option-row--risk .board-option-name {
+  background: #fcebe8;
+  color: #9a2d20;
+}
+.board-option-text {
+  margin: 0;
+  min-width: 0;
+}
+.board-option-empty {
+  margin: 0;
+  color: #6b6757;
+}
+
+/* ---------- カード下部 ---------- */
+.board-card-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.board-link {
+  color: var(--gold-dark, #8a6a12);
+  font-weight: 700;
+  text-decoration: underline;
+}
+.board-link--none {
+  text-decoration: none;
+  font-weight: 400;
+  color: #8a8570;
+}
+.board-readonly {
+  font-size: 12px;
+  color: #6b6757;
+}
+.board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---------- ボタン ---------- */
+.board-btn {
+  appearance: none;
+  min-height: 36px;
+  padding: 5px 12px;
+  border: 1px solid var(--gold-dark, #8a6a12);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  color: var(--heading, #3a2f10);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.board-btn:hover {
+  background: var(--gold-pale, #fbf4de);
+}
+.board-btn:focus-visible,
+.board-token-input:focus-visible,
+.board-reason:focus-visible,
+.board-choice-radio:focus-visible,
+.board-link:focus-visible {
+  outline: 3px solid #1d5fd1;
+  outline-offset: 2px;
+}
+.board-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.board-btn--approve {
+  border-color: var(--board-approved);
+  color: var(--board-approved);
+}
+.board-btn--hold {
+  border-color: var(--board-hold);
+  color: var(--board-hold);
+}
+.board-btn--reject {
+  border-color: var(--board-rejected);
+  color: #5d626b;
+}
+.board-btn--primary {
+  background: var(--gold, #DEB143);
+  border-color: var(--gold-dark, #8a6a12);
+  color: #2b2208;
+}
+.board-btn--primary:hover {
+  background: #e9c66d;
+}
+
+/* ---------- ダイアログ ---------- */
+.board-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(30, 25, 10, 0.55);
+}
+.board-dialog {
+  width: min(640px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  border: 2px solid var(--gold-dark, #8a6a12);
+  border-radius: var(--radius, 8px);
+  background: var(--surface, #fff);
+  color: var(--text, #2b2b2b);
+  padding: 16px 18px;
+}
+.board-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  color: var(--heading, #3a2f10);
+}
+.board-dialog-sub {
+  margin: 2px 0 6px;
+  font-weight: 700;
+}
+.board-dialog-question,
+.board-dialog-note,
+.board-dialog-mode {
+  margin: 0 0 10px;
+}
+.board-dialog-mode {
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--gold-pale, #fbf4de);
+}
+.board-choices {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+.board-choices-legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.board-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.board-choice-radio {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+}
+.board-choice-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.board-reason-label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.board-reason {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line, #cdbf93);
+  border-radius: 6px;
+  font: inherit;
+  resize: vertical;
+}
+.board-dialog-error {
+  margin: 0 0 10px;
+  color: var(--board-bad);
+  font-weight: 700;
+}
+.board-dialog-error:empty {
+  display: none;
+}
+.board-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- スマホ ---------- */
+@media (max-width: 960px) {
+  .board-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .board-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .board-actions .board-btn {
+    flex: 1 1 30%;
+  }
+  .board-dialog {
+    padding: 14px;
+  }
+  .board-dialog-buttons .board-btn {
+    flex: 1 1 100%;
+  }
+}
