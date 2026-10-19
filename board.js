@@ -15,13 +15,17 @@ import {
   hasOptionDetails,
   remainingLabel,
   deadlineInstant,
+  postViaRelay,
+  isRelayUsable,
 } from './board-logic.js';
+import { RELAY_URL } from './relay-config.js';
 import { safeHref, formatDateJa, formatDateTimeJa } from './lib.js';
 
 export * from './board-logic.js';
 
 export const TOKEN_KEY = 'hq.dashboard.ghtoken';
 export const PENDING_KEY = 'hq.dashboard.pending-decisions';
+const PASSPHRASE_KEY = 'hq.dashboard.passphrase';
 
 const PENDING_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const NO_DETAIL_TEXT = '案の詳細が未取得です。Issue を開いて確認してください';
@@ -192,6 +196,18 @@ export function renderBoard(host, decisions, ctx = {}) {
   const root = el('section', 'board');
   root.setAttribute('aria-label', '判断かんばん');
 
+  // 中継(Cloudflare Worker)が使えるときは、利用者に何も貼らせずに送れる。
+  function relayUrl() {
+    return typeof ctx.relayUrl === 'string' ? ctx.relayUrl : RELAY_URL;
+  }
+  function passphraseValue() {
+    const p = store.get(PASSPHRASE_KEY);
+    return typeof p === 'string' && p !== '' ? p : '';
+  }
+  function relayReady() {
+    return isRelayUsable(relayUrl(), passphraseValue());
+  }
+
   function tokenValue() {
     const t = store.get(TOKEN_KEY);
     return typeof t === 'string' && t !== '' ? t : null;
@@ -223,7 +239,7 @@ export function renderBoard(host, decisions, ctx = {}) {
       columns[key] = keep;
     }
 
-    const children = [renderTokenBar(), renderNotice()];
+    const children = [...(relayReady() ? [] : [renderTokenBar()]), renderNotice()];
     const grid = el('div', 'board-columns');
     for (const col of COLUMNS) grid.append(renderColumn(col, columns[col.key]));
     children.push(grid);
@@ -519,12 +535,15 @@ export function renderBoard(host, decisions, ctx = {}) {
     dialog.append(reasonLabel, reason);
     focusables.push(reason);
 
-    const direct = tokenValue() !== null;
+    const viaRelay = relayReady();
+    const direct = viaRelay || tokenValue() !== null;
     dialog.append(
       el(
         'p',
         'board-dialog-mode',
-        direct
+        viaRelay
+          ? '確認すると、HQ の Issue に決定を記録します。'
+          : direct
           ? '確認すると、このコメントを GitHub の Issue に直接投稿します。'
           : 'トークン未設定のため、確認すると GitHub のコメント画面を新しいタブで開き、本文をコピーします。',
       ),
@@ -538,7 +557,7 @@ export function renderBoard(host, decisions, ctx = {}) {
     const confirm = el(
       'button',
       `board-btn board-btn--primary board-btn--${verdict}`,
-      direct ? 'この内容で GitHub に投稿する' : 'GitHub のコメント画面を開く',
+      viaRelay ? 'この内容で決定する' : direct ? 'この内容で GitHub に投稿する' : 'GitHub のコメント画面を開く',
     );
     attr(confirm, { type: 'button', 'aria-label': `${decision.id ?? ''} を${VERDICT_NAME[verdict]}として確定する` });
     const cancel = el('button', 'board-btn', 'キャンセル');
@@ -595,9 +614,11 @@ export function renderBoard(host, decisions, ctx = {}) {
       reason.disabled = value;
       confirm.textContent = value
         ? '送信中…'
-        : direct
-          ? 'この内容で GitHub に投稿する'
-          : 'GitHub のコメント画面を開く';
+        : viaRelay
+          ? 'この内容で決定する'
+          : direct
+            ? 'この内容で GitHub に投稿する'
+            : 'GitHub のコメント画面を開く';
     }
 
     confirm.addEventListener('click', async () => {
@@ -607,6 +628,36 @@ export function renderBoard(host, decisions, ctx = {}) {
       const reasonText = typeof reason.value === 'string' ? reason.value.trim() : '';
       const choiceKey = verdict === 'approve' ? selectedKey : null;
       try {
+        if (viaRelay) {
+          const ref = parseIssueRef(decision);
+          if (!ref) {
+            errorBox.textContent = 'この判断の Issue を特定できませんでした(対象は Ryoki63/solo-company のみ)。';
+            setBusy(false);
+            return;
+          }
+          const result = await postViaRelay({
+            relayUrl: relayUrl(),
+            passphrase: passphraseValue(),
+            issueRef: ref,
+            body: buildCommentBody(decision, verdict, choiceKey, reasonText),
+            fetchImpl: ctx.fetchImpl,
+          });
+          if (!result || !result.ok) {
+            errorBox.textContent = (result && result.message) || '送信できませんでした。GitHub の Issue から返信してください';
+            setBusy(false);
+            return;
+          }
+          state.pending[decision.id] = { verdict, choiceKey, at: now };
+          savePending(store, state.pending);
+          state.notice = {
+            kind: 'ok',
+            text: `${decision.id} を「${VERDICT_NAME[verdict]}」で決定しました。HQ の次回更新まで「反映待ち」で表示します。`,
+          };
+          closed = false;
+          draw();
+          if (typeof ctx.onChange === 'function') ctx.onChange();
+          return;
+        }
         const token = tokenValue();
         if (token !== null) {
           if (!validateToken(token)) {

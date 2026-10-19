@@ -285,3 +285,67 @@ export function describeOption(opt) {
 export function hasOptionDetails(decision) {
   return normalizeOptions(decision).some((o) => o.cost || o.effect || o.risk);
 }
+
+// ---- 判断コメント中継(relay) ----
+
+const RELAY_SALT = 'hq-decision-relay-v1';
+const RELAY_ITERATIONS = 100000;
+const RELAY_MSG_DEFAULT = '送信できませんでした。GitHub の Issue から返信してください';
+
+/** PBKDF2-HMAC-SHA256(100000回, 32バイト) → 小文字 hex 64桁。relay/worker.js と同一の導出。 */
+export async function deriveRelayKey(passphrase, subtle = globalThis.crypto?.subtle) {
+  if (!subtle) throw new Error('暗号機能が利用できません');
+  const enc = new TextEncoder();
+  const keyMaterial = await subtle.importKey('raw', enc.encode(String(passphrase)), 'PBKDF2', false, ['deriveBits']);
+  const bits = await subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(RELAY_SALT), iterations: RELAY_ITERATIONS },
+    keyMaterial,
+    256,
+  );
+  return Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** 中継が使える条件: relayUrl が https:// で始まり passphrase が非空。 */
+export function isRelayUsable(relayUrl, passphrase) {
+  return typeof relayUrl === 'string' && relayUrl.startsWith('https://') &&
+    typeof passphrase === 'string' && passphrase.length > 0;
+}
+
+/** 中継 Worker へ決定コメントを POST。パスフレーズ・key は戻り値/メッセージに含めない。 */
+export async function postViaRelay({ relayUrl, passphrase, issueRef, body, fetchImpl, subtle } = {}) {
+  if (!isRelayUsable(relayUrl, passphrase)) return { ok: false, message: '中継が設定されていません' };
+  if (!isObject(issueRef) || typeof issueRef.repo !== 'string' || toIssueNumber(issueRef.number) === null) {
+    return { ok: false, message: '投稿先の Issue を特定できません' };
+  }
+  if (typeof fetchImpl !== 'function') return { ok: false, message: '通信機能が利用できません' };
+  let key;
+  try {
+    key = await deriveRelayKey(passphrase, subtle);
+  } catch {
+    return { ok: false, message: RELAY_MSG_DEFAULT };
+  }
+  let res;
+  try {
+    res = await fetchImpl(`${relayUrl.replace(/\/+$/, '')}/decide`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issue_repo: issueRef.repo, issue_number: issueRef.number, body }),
+    });
+  } catch {
+    return { ok: false, message: RELAY_MSG_DEFAULT };
+  }
+  if (res && res.ok) {
+    let url = null;
+    try {
+      const data = await res.json();
+      if (data && typeof data.url === 'string' && data.url.startsWith('https://github.com/')) url = data.url;
+    } catch {
+      url = null;
+    }
+    return { ok: true, url };
+  }
+  const status = res && typeof res.status === 'number' ? res.status : 0;
+  if (status === 401) return { ok: false, status, message: '認証に失敗しました。ロックして入り直してください' };
+  if (status === 429) return { ok: false, status, message: 'しばらくしてからもう一度お試しください' };
+  return { ok: false, status, message: RELAY_MSG_DEFAULT };
+}
