@@ -42,7 +42,7 @@ import {
   topN,
 } from './lib.js';
 
-const PASS_STORAGE_KEY = 'hq.dashboard.passphrase';
+const PASS_STORAGE_KEY = 'consilium.dashboard.passphrase';
 const CLOCK_INTERVAL_MS = 30_000;
 const TASKS_PER_COLUMN = 5;
 const CLOCK_HOURS = [0, 3, 6, 9, 12, 15, 18, 21, 24];
@@ -268,7 +268,7 @@ function boardStorage() {
 }
 
 function renderDecisions(data) {
-  const section = panel('decisions', '判断ボード', 'カードをドラッグして、承認・保留・見送りを決めます');
+  const section = panel('decisions', '判断ボード', '行をクリックすると詳細。右の列へドラッグするか、ボタンで回答できます');
   section.classList.add('panel--primary');
   const list = Array.isArray(data.decisions) ? data.decisions : [];
   if (list.length === 0) {

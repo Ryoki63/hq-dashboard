@@ -13,6 +13,7 @@ import {
   normalizeOptions,
   describeOption,
   hasOptionDetails,
+  recommendedOption,
   remainingLabel,
   deadlineInstant,
   postViaRelay,
@@ -23,9 +24,9 @@ import { safeHref, formatDateJa, formatDateTimeJa } from './lib.js';
 
 export * from './board-logic.js';
 
-export const TOKEN_KEY = 'hq.dashboard.ghtoken';
-export const PENDING_KEY = 'hq.dashboard.pending-decisions';
-const PASSPHRASE_KEY = 'hq.dashboard.passphrase';
+export const TOKEN_KEY = 'consilium.dashboard.ghtoken';
+export const PENDING_KEY = 'consilium.dashboard.pending-decisions';
+const PASSPHRASE_KEY = 'consilium.dashboard.passphrase';
 
 const PENDING_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const NO_DETAIL_TEXT = '案の詳細が未取得です。Issue を開いて確認してください';
@@ -34,8 +35,8 @@ const TOKEN_GUIDE =
   'トークンはこのタブのセッション中だけ保持し、画面には再表示しません。';
 
 const COLUMNS = [
-  { key: 'pending', title: '判断待ち', hint: 'ここからドラッグして決めます', verdict: null },
-  { key: 'approved', title: '承認', hint: '決定済み・実行へ', verdict: 'approve' },
+  { key: 'pending', title: '判断待ち', hint: '行を右の列へドラッグ、またはボタンで回答できます', verdict: null },
+  { key: 'approved', title: '承認済み', hint: '決定済み・実行へ', verdict: 'approve' },
   { key: 'hold', title: '保留', hint: '期限切れ(無返答時の扱いが適用中)または保留', verdict: 'hold' },
   { key: 'rejected', title: '見送り', hint: '実行しない', verdict: 'reject' },
 ];
@@ -65,6 +66,22 @@ function stripRecommended(title) {
   return String(title ?? '')
     .replace(/\s*推奨\s*$/, '')
     .trim();
+}
+
+/** classifyDecisions と同じ規則で status を正規化する(status 無しは pending)。 */
+function decisionStatus(decision) {
+  const s = decision && decision.status;
+  return s === undefined || s === null || s === '' ? 'pending' : s;
+}
+
+/** クリック元がボタン等の操作要素か(FakeElement には closest が無いのでガードする)。 */
+function isControlEvent(event) {
+  const target = event && event.target;
+  if (!target) return false;
+  if (typeof target.closest === 'function') {
+    return Boolean(target.closest('button, a, input, textarea, label, summary, details'));
+  }
+  return target.tagName === 'BUTTON' || target.tagName === 'A';
 }
 
 // ---------- ctx.storage(例外は握りつぶす) ----------
@@ -111,7 +128,7 @@ function prunePending(store, decisions, now) {
     const at = Number(entry && entry.at);
     const stale = Number.isFinite(at) && now - at > PENDING_MAX_AGE_MS;
     const valid = entry && VERDICT_COLUMN[entry.verdict];
-    if (!valid || stale || (decision && decision.status !== 'pending')) {
+    if (!valid || stale || (decision && decisionStatus(decision) !== 'pending')) {
       delete map[id];
       changed = true;
     }
@@ -219,6 +236,52 @@ export function renderBoard(host, decisions, ctx = {}) {
     if (state.openDialog) state.openDialog.close();
   }
 
+  // モーダルの共通制御(背景クリック・Esc・Tab トラップ・フォーカス復帰)。
+  function makeCloser(overlay, previousFocus) {
+    let closed = false;
+    return function close() {
+      if (closed) return;
+      closed = true;
+      if (state.openDialog && state.openDialog.overlay === overlay) state.openDialog = null;
+      root.replaceChildren(...Array.from(root.children).filter((c) => c !== overlay));
+      if (previousFocus && typeof previousFocus.focus === 'function') {
+        try {
+          previousFocus.focus();
+        } catch {
+          /* 無視 */
+        }
+      }
+    };
+  }
+
+  function mountModal(overlay, focusables, close, canClose, initialFocus) {
+    overlay.addEventListener('click', (e) => {
+      if (e && e.target === overlay && canClose()) close();
+    });
+    overlay.addEventListener('keydown', (e) => {
+      if (!e) return;
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (canClose()) close();
+        return;
+      }
+      if (e.key === 'Tab' && focusables.length > 0) {
+        const active = typeof document !== 'undefined' ? document.activeElement : null;
+        const idx = focusables.indexOf(active);
+        const last = focusables.length - 1;
+        if (e.shiftKey && idx <= 0) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          focusables[last].focus();
+        } else if (!e.shiftKey && idx === last) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          focusables[0].focus();
+        }
+      }
+    });
+    const first = initialFocus || focusables[0];
+    if (first && typeof first.focus === 'function') first.focus();
+  }
+
   function draw() {
     closeDialog();
     const buckets = classifyDecisions(list, now);
@@ -232,7 +295,7 @@ export function renderBoard(host, decisions, ctx = {}) {
       for (const item of columns[key]) {
         const entry = state.pending[item.decision.id];
         const target = entry ? VERDICT_COLUMN[entry.verdict] : null;
-        if (target && item.decision.status === 'pending') {
+        if (target && decisionStatus(item.decision) === 'pending') {
           columns[target].push({ decision: item.decision, awaiting: entry });
         } else {
           keep.push(item);
@@ -243,7 +306,18 @@ export function renderBoard(host, decisions, ctx = {}) {
 
     const children = [...(relayReady() ? [] : [renderTokenBar()]), renderNotice()];
     const grid = el('div', 'board-columns');
-    for (const col of COLUMNS) grid.append(renderColumn(col, columns[col.key]));
+    // 判断待ち(左)と、ドロップ先の3列(右)を分ける。右は sticky にして
+    // 判断待ちが長くても回答先が画面から消えないようにする。
+    for (const col of COLUMNS) {
+      if (col.key !== 'pending') continue;
+      grid.append(renderColumn(col, columns[col.key]));
+    }
+    const targets = el('div', 'board-targets');
+    for (const col of COLUMNS) {
+      if (col.key === 'pending') continue;
+      targets.append(renderColumn(col, columns[col.key]));
+    }
+    grid.append(targets);
     children.push(grid);
     root.replaceChildren(...children);
   }
@@ -325,8 +399,13 @@ export function renderBoard(host, decisions, ctx = {}) {
     head.append(el('h3', 'board-column-title', col.title), el('span', 'board-column-count', String(items.length)));
     section.append(head, el('p', 'board-column-hint', col.hint));
     const body = el('div', 'board-column-body');
-    if (items.length === 0) body.append(el('p', 'board-empty', '該当なし'));
-    for (const item of items) body.append(renderCard(col, item));
+    if (items.length === 0) {
+      body.append(el('p', 'board-empty', col.key === 'pending' ? '承認待ちはありません' : '該当なし'));
+      if (col.key === 'pending') {
+        body.append(el('p', 'board-empty-hint', '届くとここに並び、右の列へドラッグできます'));
+      }
+    }
+    for (const item of items) body.append(renderRow(col, item));
     section.append(body);
 
     if (col.verdict) {
@@ -347,20 +426,25 @@ export function renderBoard(host, decisions, ctx = {}) {
         if (!id && e && e.dataTransfer && typeof e.dataTransfer.getData === 'function') id = e.dataTransfer.getData('text/plain');
         state.dragId = null;
         const decision = list.find((d) => d.id === id);
-        if (decision && decision.status === 'pending' && !state.pending[decision.id]) openDialog(decision, col.verdict);
+        if (decision && decisionStatus(decision) === 'pending' && !state.pending[decision.id]) {
+          openDialog(decision, col.verdict);
+        }
       });
     }
     return section;
   }
 
-  function renderCard(col, item) {
+  // 要約行。詳細(問い・案の比較・推奨・Issue)は openDetail のダイアログに置く。
+  function renderRow(col, item) {
     const d = item.decision;
     const awaiting = item.awaiting;
-    const decided = d.status === 'approved' || d.status === 'rejected';
-    const actionable = d.status === 'pending' && !awaiting;
-    const draggable = col.key === 'pending' && actionable;
+    const status = decisionStatus(d);
+    const pending = status === 'pending';
+    const actionable = pending && !awaiting && col.key === 'pending';
+    const draggable = actionable;
+    const detailItem = { decision: d, awaiting, columnKey: col.key };
 
-    const card = el('article', `board-card board-card--${col.key}`);
+    const card = el('article', `board-card board-card--row board-card--${col.key}`);
     card.setAttribute('data-id', String(d.id ?? ''));
     if (draggable) {
       card.classList.add('board-card--draggable');
@@ -387,15 +471,112 @@ export function renderBoard(host, decisions, ctx = {}) {
       card.setAttribute('aria-readonly', 'true');
     }
 
-    const head = el('header', 'board-card-head');
+    const head = el('header', 'board-row-head');
+    if (draggable) {
+      const grip = el('span', 'board-drag-handle');
+      grip.setAttribute('aria-hidden', 'true');
+      head.append(grip);
+    }
     head.append(el('span', 'board-card-id', String(d.id ?? '(ID なし)')));
-    if (awaiting) head.append(el('span', 'board-badge board-badge--awaiting', '反映待ち'));
-    card.append(head, el('h4', 'board-card-title', isText(d.title) ? d.title : '(題名なし)'));
+
+    const titleText = isText(d.title) ? d.title : '(題名なし)';
+    const titleBtn = el('button', 'board-row-title', titleText);
+    attr(titleBtn, { type: 'button', 'aria-label': `${d.id ?? '判断'} ${titleText} の詳細を開く` });
+    if (isText(d.title)) titleBtn.setAttribute('title', titleText);
+    titleBtn.addEventListener('click', () => openDetail(detailItem, titleBtn));
+    head.append(titleBtn);
+
+    if (awaiting) {
+      head.append(el('span', 'board-badge board-badge--awaiting', '反映待ち'));
+      const name = VERDICT_NAME[awaiting.verdict] ?? '決定';
+      const choice = awaiting.verdict === 'approve' && isText(awaiting.choiceKey) ? `(案${awaiting.choiceKey})` : '';
+      head.append(el('span', 'board-badge board-badge--decided', `${name}${choice}`));
+    } else if (status === 'approved') {
+      head.append(el('span', 'board-badge board-badge--approved', `承認${isText(d.choice) ? `(案${d.choice})` : ''}`));
+    } else if (status === 'rejected') {
+      head.append(el('span', 'board-badge board-badge--rejected', '見送り'));
+    } else if (pending && col.key === 'hold') {
+      head.append(el('span', 'board-badge board-badge--expired', '期限切れ'));
+    } else if (actionable) {
+      const rec = recommendedOption(d);
+      if (rec) {
+        const key = isText(rec.key) ? ` 案${rec.key}` : '';
+        head.append(el('span', 'board-chip board-chip--recommended', `推奨${key}`));
+      }
+      const level = urgency(d.deadline, now);
+      head.append(
+        el(
+          'span',
+          `board-chip board-chip--deadline board-chip--${level}`,
+          isText(d.deadline) ? `期限 ${remainingLabel(d.deadline, now)}` : '期限なし',
+        ),
+      );
+    }
+    card.append(head);
+
+    const actions = el('div', 'board-row-actions');
+    if (actionable) {
+      for (const verdict of ['approve', 'hold', 'reject']) {
+        const btn = el('button', `board-btn board-btn--${verdict}`, VERDICT_VERB[verdict]);
+        attr(btn, { type: 'button', 'aria-label': `${d.id ?? ''} を${VERDICT_VERB[verdict]}` });
+        btn.addEventListener('click', () => openDialog(d, verdict, btn));
+        actions.append(btn);
+      }
+    }
+    const detailBtn = el('button', 'board-btn board-btn--detail', '詳細');
+    attr(detailBtn, { type: 'button', 'aria-label': `${d.id ?? ''} の詳細を開く` });
+    detailBtn.addEventListener('click', () => openDetail(detailItem, detailBtn));
+    actions.append(detailBtn);
+    head.append(actions);
+
+    card.addEventListener('click', (e) => {
+      if (isControlEvent(e)) return;
+      openDetail(detailItem, titleBtn);
+    });
+    return card;
+  }
+
+  // ----- 詳細ダイアログ -----
+  function openDetail(item, opener) {
+    const d = item.decision;
+    const awaiting = item.awaiting;
+    const columnKey = item.columnKey ?? 'pending';
+    const status = decisionStatus(d);
+    const actionable = status === 'pending' && !awaiting && columnKey === 'pending';
+    closeDialog();
+    const previousFocus = opener || (typeof document !== 'undefined' ? document.activeElement : null);
+    const overlay = el('div', 'board-overlay');
+    const dialog = el('div', 'board-dialog board-dialog--detail');
+    const titleId = `board-detail-title-${String(d.id ?? 'x').replace(/[^A-Za-z0-9_-]/g, '')}`;
+    attr(dialog, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, tabindex: '-1' });
+    const focusables = [];
+
+    const title = el('h3', 'board-dialog-title', isText(d.title) ? d.title : '(題名なし)');
+    title.setAttribute('id', titleId);
+    dialog.append(title);
+
+    const head = el('div', 'board-detail-head');
+    head.append(el('span', 'board-dialog-id', String(d.id ?? '')));
+    if (awaiting) {
+      head.append(el('span', 'board-badge board-badge--awaiting', '反映待ち'));
+      const name = VERDICT_NAME[awaiting.verdict] ?? '決定';
+      const choice = awaiting.verdict === 'approve' && isText(awaiting.choiceKey) ? `(案${awaiting.choiceKey})` : '';
+      head.append(el('span', 'board-badge board-badge--decided', `${name}${choice}`));
+    } else if (status === 'approved') {
+      head.append(el('span', 'board-badge board-badge--approved', `承認${isText(d.choice) ? `(案${d.choice})` : ''}`));
+    } else if (status === 'rejected') {
+      head.append(el('span', 'board-badge board-badge--rejected', '見送り'));
+    } else if (status === 'pending' && columnKey === 'hold') {
+      head.append(el('span', 'board-badge board-badge--expired', '期限切れ'));
+    } else {
+      head.append(el('span', 'board-badge board-badge--pending', '判断待ち'));
+    }
+    dialog.append(head);
 
     if (isText(d.question)) {
-      const q = el('p', 'board-card-question');
+      const q = el('p', 'board-dialog-question');
       q.append(el('span', 'board-label', '問い'), document.createTextNode(d.question));
-      card.append(q);
+      dialog.append(q);
     }
 
     const meta = el('dl', 'board-meta');
@@ -404,55 +585,73 @@ export function renderBoard(host, decisions, ctx = {}) {
       row.append(el('dt', 'board-meta-name', name), el('dd', cls ? `board-meta-text ${cls}` : 'board-meta-text', value));
       meta.append(row);
     };
-    if (d.status === 'pending') {
+    if (status === 'pending') {
       const level = urgency(d.deadline, now);
-      const when = isText(d.deadline) ? `${formatDateJa(d.deadline)}(${remainingLabel(d.deadline, now)})` : '期限なし';
+      const when = isText(d.deadline) ? `${formatDateJa(d.deadline)}（${remainingLabel(d.deadline, now)}）` : '期限なし';
       metaRow('期限', when, `board-deadline board-deadline--${level}`);
       metaRow('無返答の場合', isText(d.default_if_no_reply) ? d.default_if_no_reply : '未設定');
+      if (columnKey === 'hold') metaRow('状態', '期限切れ（無返答時の扱いを適用中）');
     } else {
-      metaRow('決定', `${d.status === 'approved' ? '承認' : '見送り'}${isText(d.choice) ? `(${d.choice})` : ''}`);
+      metaRow('決定', `${status === 'approved' ? '承認' : '見送り'}${isText(d.choice) ? `（案${d.choice}）` : ''}`);
       if (isText(d.decided_at)) metaRow('決定日時', formatDateTimeJa(d.decided_at));
     }
-    card.append(meta);
+    dialog.append(meta);
 
     if (awaiting) {
       const name = VERDICT_NAME[awaiting.verdict] ?? '決定';
       const choice = awaiting.verdict === 'approve' && isText(awaiting.choiceKey) ? `(案${awaiting.choiceKey})` : '';
-      card.append(
-        el('p', 'board-awaiting-note', `あなたの決定「${name}${choice}」を投稿しました。HQ が次回の更新で反映します。`),
+      dialog.append(
+        el('p', 'board-awaiting-note', `あなたの決定「${name}${choice}」を投稿しました。Consilium が次回の更新で反映します。`),
       );
     }
 
-    card.append(renderOptionList(d, d.status === 'pending'));
+    dialog.append(renderOptionList(d, true));
+
     if (isText(d.recommendation)) {
       const rec = el('p', 'board-card-recommendation');
-      rec.append(el('span', 'board-label', 'HQ の推奨'), document.createTextNode(d.recommendation));
-      card.append(rec);
+      rec.append(el('span', 'board-label', 'Consilium の推奨'), document.createTextNode(d.recommendation));
+      dialog.append(rec);
     }
 
-    const foot = el('footer', 'board-card-foot');
+    const foot = el('footer', 'board-detail-foot');
     const href = safeHref(d.issue_url);
     if (href) {
       const link = el('a', 'board-link', d.issue_number ? `Issue #${d.issue_number} を開く` : 'Issue を開く');
       attr(link, { href, target: '_blank', rel: 'noopener noreferrer' });
       foot.append(link);
+      focusables.push(link);
     } else {
       foot.append(el('span', 'board-link board-link--none', 'Issue リンクなし'));
     }
+
+    const actions = el('div', 'board-detail-actions');
     if (actionable) {
-      const actions = el('div', 'board-actions');
       for (const verdict of ['approve', 'hold', 'reject']) {
         const btn = el('button', `board-btn board-btn--${verdict}`, VERDICT_VERB[verdict]);
-        attr(btn, { type: 'button', 'aria-label': `${d.id} を${VERDICT_VERB[verdict]}` });
-        btn.addEventListener('click', () => openDialog(d, verdict, btn));
+        attr(btn, { type: 'button', 'aria-label': `${d.id ?? ''} を${VERDICT_VERB[verdict]}` });
+        btn.addEventListener('click', () => {
+          close();
+          openDialog(d, verdict, previousFocus || opener);
+        });
         actions.append(btn);
+        focusables.push(btn);
       }
-      foot.append(actions);
-    } else if (decided) {
-      foot.append(el('span', 'board-readonly', '読み取り専用(台帳が正本)'));
+    } else {
+      foot.append(el('p', 'board-readonly', '読み取り専用（台帳が正本）'));
     }
-    card.append(foot);
-    return card;
+    const closeBtn = el('button', 'board-btn', '閉じる');
+    attr(closeBtn, { type: 'button', 'aria-label': '詳細を閉じる' });
+    closeBtn.addEventListener('click', () => close());
+    actions.append(closeBtn);
+    focusables.push(closeBtn);
+    foot.append(actions);
+    dialog.append(foot);
+
+    const close = makeCloser(overlay, previousFocus);
+    overlay.append(dialog);
+    root.append(overlay);
+    state.openDialog = { overlay, close };
+    mountModal(overlay, focusables, close, () => true, dialog);
   }
 
   // ----- 確認ダイアログ -----
@@ -463,11 +662,11 @@ export function renderBoard(host, decisions, ctx = {}) {
     const detailed = hasOptionDetails(decision);
     let selectedKey = null;
     if (verdict === 'approve' && options.length > 0) {
-      const rec = options.find((o) => o.key === decision.recommended_key) || options.find((o) => o.recommended);
-      selectedKey = (rec || options[0]).key;
+      const rec = recommendedOption(decision);
+      const picked = (rec && options.find((o) => o.key === rec.key)) || options[0];
+      selectedKey = picked.key;
     }
     let busy = false;
-    let closed = false;
 
     const overlay = el('div', 'board-overlay');
     const dialog = el('div', 'board-dialog');
@@ -544,7 +743,7 @@ export function renderBoard(host, decisions, ctx = {}) {
         'p',
         'board-dialog-mode',
         viaRelay
-          ? '確認すると、HQ の Issue に決定を記録します。'
+          ? '確認すると、Consilium の Issue に決定を記録します。'
           : direct
           ? '確認すると、このコメントを GitHub の Issue に直接投稿します。'
           : 'トークン未設定のため、確認すると GitHub のコメント画面を新しいタブで開き、本文をコピーします。',
@@ -568,45 +767,9 @@ export function renderBoard(host, decisions, ctx = {}) {
     dialog.append(buttons);
     focusables.push(cancel, confirm);
 
-    function close() {
-      if (closed) return;
-      closed = true;
-      if (state.openDialog && state.openDialog.overlay === overlay) state.openDialog = null;
-      root.replaceChildren(...Array.from(root.children).filter((c) => c !== overlay));
-      if (previousFocus && typeof previousFocus.focus === 'function') {
-        try {
-          previousFocus.focus();
-        } catch {
-          /* 無視 */
-        }
-      }
-    }
-
+    const close = makeCloser(overlay, previousFocus);
     cancel.addEventListener('click', () => {
       if (!busy) close();
-    });
-    overlay.addEventListener('click', (e) => {
-      if (e && e.target === overlay && !busy) close();
-    });
-    overlay.addEventListener('keydown', (e) => {
-      if (!e) return;
-      if (e.key === 'Escape' || e.key === 'Esc') {
-        if (typeof e.preventDefault === 'function') e.preventDefault();
-        if (!busy) close();
-        return;
-      }
-      if (e.key === 'Tab' && focusables.length > 0) {
-        const active = typeof document !== 'undefined' ? document.activeElement : null;
-        const idx = focusables.indexOf(active);
-        const last = focusables.length - 1;
-        if (e.shiftKey && idx <= 0) {
-          if (typeof e.preventDefault === 'function') e.preventDefault();
-          focusables[last].focus();
-        } else if (!e.shiftKey && idx === last) {
-          if (typeof e.preventDefault === 'function') e.preventDefault();
-          focusables[0].focus();
-        }
-      }
     });
 
     function setBusy(value) {
@@ -653,9 +816,8 @@ export function renderBoard(host, decisions, ctx = {}) {
           savePending(store, state.pending);
           state.notice = {
             kind: 'ok',
-            text: `${decision.id} を「${VERDICT_NAME[verdict]}」で決定しました。HQ の次回更新まで「反映待ち」で表示します。`,
+            text: `${decision.id} を「${VERDICT_NAME[verdict]}」で決定しました。Consilium の次回更新まで「反映待ち」で表示します。`,
           };
-          closed = false;
           draw();
           if (typeof ctx.onChange === 'function') ctx.onChange();
           return;
@@ -685,9 +847,8 @@ export function renderBoard(host, decisions, ctx = {}) {
           savePending(store, state.pending);
           state.notice = {
             kind: 'ok',
-            text: `${decision.id} を「${VERDICT_NAME[verdict]}」として投稿しました。HQ の次回更新まで「反映待ち」で表示します。`,
+            text: `${decision.id} を「${VERDICT_NAME[verdict]}」として投稿しました。Consilium の次回更新まで「反映待ち」で表示します。`,
           };
-          closed = false; // draw() 内の closeDialog 経由で close() が呼ばれる
           draw();
           if (typeof ctx.onChange === 'function') ctx.onChange();
           return;
@@ -722,7 +883,6 @@ export function renderBoard(host, decisions, ctx = {}) {
             ? 'GitHub のコメント画面を開きました。コピー済みの本文を貼り付けて投稿してください(まだ投稿されていません)。'
             : 'GitHub のコメント画面を開きました。本文のコピーに失敗したため、手入力で投稿してください(まだ投稿されていません)。',
         };
-        closed = false;
         closeDialog();
         applyNotice();
       } catch (err) {
@@ -735,8 +895,7 @@ export function renderBoard(host, decisions, ctx = {}) {
     overlay.append(dialog);
     root.append(overlay);
     state.openDialog = { overlay, close };
-    const first = focusables[0];
-    if (first && typeof first.focus === 'function') first.focus();
+    mountModal(overlay, focusables, close, () => !busy);
   }
 
   host.replaceChildren(root);

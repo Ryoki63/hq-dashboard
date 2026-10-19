@@ -225,7 +225,7 @@ html { scroll-behavior: smooth; }
 .board-card-title { margin: 2px 0 8px; font-size: 15px; line-height: 1.45; }
 .board-card-id { color: #8a867a; font-size: 11.5px; }
 
-/* 「問い」「HQ の推奨」のラベルはタグ風に */
+/* 「問い」「Consilium の推奨」のラベルはタグ風に */
 .board-label {
   padding: 1px 8px;
   border: 0;

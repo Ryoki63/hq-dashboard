@@ -286,6 +286,18 @@ export function hasOptionDetails(decision) {
   return normalizeOptions(decision).some((o) => o.cost || o.effect || o.risk);
 }
 
+/** 推奨案を 1 つ返す(recommended_key 一致 → recommended:true → 先頭)。無ければ null。 */
+export function recommendedOption(decision) {
+  const options = normalizeOptions(decision);
+  if (options.length === 0) return null;
+  const key = isObject(decision) ? nonEmptyString(decision.recommended_key) : null;
+  if (key !== null) {
+    const hit = options.find((o) => o.key === key);
+    if (hit) return hit;
+  }
+  return options.find((o) => o.recommended) || options[0] || null;
+}
+
 // ---- 判断コメント中継(relay) ----
 
 const RELAY_SALT = 'hq-decision-relay-v1';
