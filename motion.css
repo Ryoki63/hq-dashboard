@@ -523,6 +523,102 @@ html.mo-on .header-item--warn {
   }
 }
 
+/* ---------------------------------------------------------------- 第2段: 挿入位置の線・着地バウンス・解錠 */
+
+/* ドラッグ中、入る位置のカードの手前(または末尾の後ろ)に、列の色の線が伸びる */
+.board-card--drop-before,
+.board-card--drop-after {
+  position: relative;
+}
+
+.board-card--drop-before::before,
+.board-card--drop-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--col, var(--gold));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--col, var(--gold)) 22%, transparent);
+  pointer-events: none;
+  transform-origin: left center;
+  animation: mo-line 220ms var(--mo-ease) backwards;
+}
+
+.board-card--drop-before::before {
+  top: -7px;
+}
+
+.board-card--drop-after::after {
+  bottom: -7px;
+}
+
+/* 決定を送った直後、カードが列に落ちてバウンドする */
+html.mo-on .board-card--dropped {
+  animation: mo-bounce 640ms var(--mo-spring) backwards;
+}
+
+/* 解錠に成功したとき: 鍵のつるが跳ね上がり、画面が開く */
+.lock--opening {
+  animation: mo-unlock-out 420ms var(--mo-ease) forwards;
+}
+
+.lock--opening::after {
+  animation: mo-unlock-shackle 420ms var(--mo-spring) forwards;
+}
+
+html.mo-on .dash--entering {
+  animation: mo-unlock-in 520ms var(--mo-spring) backwards;
+}
+
+@keyframes mo-line {
+  from {
+    opacity: 0;
+    transform: scaleX(0.2);
+  }
+}
+
+@keyframes mo-bounce {
+  0% {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.94);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0) scale(1.03, 0.94);
+  }
+  65% {
+    transform: translateY(-7px) scale(0.99, 1.02);
+  }
+  82% {
+    transform: translateY(0) scale(1.01, 0.98);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes mo-unlock-shackle {
+  to {
+    transform: translateY(-9px) rotate(24deg);
+  }
+}
+
+@keyframes mo-unlock-out {
+  to {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+}
+
+@keyframes mo-unlock-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+}
+
 /* ---------------------------------------------------------------- 動きを減らす設定・印刷 */
 
 @media (prefers-reduced-motion: reduce) {

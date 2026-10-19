@@ -201,6 +201,18 @@ function renderOptionList(decision, open = true) {
 
 // ---------- メイン ----------
 
+/**
+ * ドラッグ中のポインタ位置 y が、並んだカードの何番目の手前に入るかを返す。
+ * mids はカードの縦方向の中間点(上から順)。y が最後より下なら mids.length(末尾)。
+ */
+export function insertIndex(mids, y) {
+  if (!Array.isArray(mids) || !Number.isFinite(y)) return Array.isArray(mids) ? mids.length : 0;
+  for (let i = 0; i < mids.length; i += 1) {
+    if (y < mids[i]) return i;
+  }
+  return mids.length;
+}
+
 export function renderBoard(host, decisions, ctx = {}) {
   const store = makeStore(ctx.storage);
   const now = Number.isFinite(Number(ctx.now)) ? Number(ctx.now) : Date.now();
@@ -209,6 +221,7 @@ export function renderBoard(host, decisions, ctx = {}) {
     notice: null, // {kind:'ok'|'error', text}
     openDialog: null, // {overlay, close}
     dragId: null,
+    justDropped: null, // 直前に決定したカードの ID(着地のバウンス用。1 回の描画だけ使う)
     pending: prunePending(store, list, now),
   };
 
@@ -409,19 +422,40 @@ export function renderBoard(host, decisions, ctx = {}) {
     section.append(body);
 
     if (col.verdict) {
+      // 挿入位置の線: 既存カードの中間点とポインタの高さから「何番目の手前か」を決め、
+      // 属性 data-drop-index に入れる(線そのものは CSS が描く)。
+      const dropCards = () => (typeof body.querySelectorAll === 'function' ? Array.from(body.querySelectorAll('.board-card')) : []);
+      const clearDropIndex = () => {
+        for (const c of dropCards()) c.classList.remove('board-card--drop-before', 'board-card--drop-after');
+      };
+      const updateDropIndex = (e) => {
+        const cards = dropCards();
+        const mids = cards.map((c) => {
+          const r = typeof c.getBoundingClientRect === 'function' ? c.getBoundingClientRect() : null;
+          return r ? r.top + r.height / 2 : 0;
+        });
+        const at = insertIndex(mids, e && Number(e.clientY));
+        clearDropIndex();
+        if (cards.length === 0) return;
+        if (at < cards.length) cards[at].classList.add('board-card--drop-before');
+        else cards[cards.length - 1].classList.add('board-card--drop-after');
+      };
       section.addEventListener('dragover', (e) => {
         if (!state.dragId) return;
         if (e && typeof e.preventDefault === 'function') e.preventDefault();
         if (e && e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         section.classList.add('board-column--over');
+        updateDropIndex(e);
       });
       section.addEventListener('dragleave', (e) => {
         if (e && e.relatedTarget && typeof section.contains === 'function' && section.contains(e.relatedTarget)) return;
         section.classList.remove('board-column--over');
+        clearDropIndex();
       });
       section.addEventListener('drop', (e) => {
         if (e && typeof e.preventDefault === 'function') e.preventDefault();
         section.classList.remove('board-column--over');
+        clearDropIndex();
         let id = state.dragId;
         if (!id && e && e.dataTransfer && typeof e.dataTransfer.getData === 'function') id = e.dataTransfer.getData('text/plain');
         state.dragId = null;
@@ -446,6 +480,10 @@ export function renderBoard(host, decisions, ctx = {}) {
 
     const card = el('article', `board-card board-card--row board-card--${col.key}`);
     card.setAttribute('data-id', String(d.id ?? ''));
+    if (awaiting && state.justDropped !== null && state.justDropped === d.id) {
+      card.classList.add('board-card--dropped');
+      state.justDropped = null;
+    }
     if (draggable) {
       card.classList.add('board-card--draggable');
       card.setAttribute('draggable', 'true');
@@ -813,6 +851,7 @@ export function renderBoard(host, decisions, ctx = {}) {
             return;
           }
           state.pending[decision.id] = { verdict, choiceKey, at: now };
+          state.justDropped = decision.id;
           savePending(store, state.pending);
           state.notice = {
             kind: 'ok',
@@ -844,6 +883,7 @@ export function renderBoard(host, decisions, ctx = {}) {
             return;
           }
           state.pending[decision.id] = { verdict, choiceKey, at: now };
+          state.justDropped = decision.id;
           savePending(store, state.pending);
           state.notice = {
             kind: 'ok',

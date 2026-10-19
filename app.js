@@ -1048,6 +1048,38 @@ function describeError(error) {
   return '読み込みに失敗しました';
 }
 
+// 手入力で解錠できたとき、鍵が開く動きを短く見せてから画面を切り替える。
+// 動きを減らす設定・アニメーションに対応しない環境では待たない。
+const UNLOCK_MS = 420;
+
+function motionAllowed() {
+  try {
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  } catch {
+    return false;
+  }
+  return typeof document.documentElement?.animate === 'function';
+}
+
+function playUnlock() {
+  const lockScreen = $('#lock-screen');
+  if (!lockScreen || !motionAllowed()) return Promise.resolve();
+  lockScreen.classList.add('lock--opening');
+  return new Promise((resolve) => {
+    window.setTimeout(() => {
+      lockScreen.classList.remove('lock--opening');
+      resolve();
+    }, UNLOCK_MS);
+  });
+}
+
+function markEntering() {
+  const dashboard = $('#dashboard');
+  if (!dashboard || !motionAllowed()) return;
+  dashboard.classList.add('dash--entering');
+  window.setTimeout(() => dashboard.classList.remove('dash--entering'), 600);
+}
+
 async function handleUnlock(event) {
   event.preventDefault();
   const input = $('#passphrase');
@@ -1061,7 +1093,9 @@ async function handleUnlock(event) {
   try {
     const data = await unlockWith(passphrase);
     const saved = safeStorageSet(PASS_STORAGE_KEY, passphrase);
+    await playUnlock();
     showDashboard(data);
+    markEntering();
     if (!saved) {
       setBootError('このブラウザではパスフレーズを保持できません。再読み込みの際は再入力してください。');
     }
