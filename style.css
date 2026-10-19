@@ -1120,6 +1120,12 @@ summary:focus-visible {
   cursor: pointer;
 }
 
+.history-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 .dept-body {
   margin-top: 6px;
   padding-top: 6px;

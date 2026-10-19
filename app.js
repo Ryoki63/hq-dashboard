@@ -786,6 +786,71 @@ function renderTimeline(items) {
   return wrap;
 }
 
+function appendDeptReports(host, depts, heading) {
+  const entries = depts && typeof depts === 'object' && !Array.isArray(depts) ? Object.entries(depts) : [];
+  if (entries.length === 0) return;
+  entries.sort((a, b) => deptRank(a[0]) - deptRank(b[0]));
+  host.append(el('h3', { class: 'section-heading', text: heading }));
+  const list = el('div', { class: 'dept-list' });
+  for (const [dept, body] of entries) {
+    const details = el('details', { class: 'dept-card' });
+    details.append(el('summary', { text: deptLabel(dept) }));
+    const bodyHost = el('div', { class: 'dept-body' });
+    bodyHost.append(markdown(typeof body === 'string' ? body : '', 'md'));
+    details.append(bodyHost);
+    list.append(details);
+  }
+  host.append(list);
+}
+
+/** 役職別の学び（24 役職）。部署順 → 部長・実行・レビューの順に並べる。 */
+function appendRoleLearnings(host, roles) {
+  const entries = roles && typeof roles === 'object' && !Array.isArray(roles) ? Object.entries(roles) : [];
+  if (entries.length === 0) return;
+  const levelRank = { lead: 0, exec: 1, review: 2 };
+  const parse = (id) => {
+    const idx = id.lastIndexOf('-');
+    return [id.slice(0, idx), id.slice(idx + 1)];
+  };
+  entries.sort((a, b) => {
+    const [da, la] = parse(a[0]);
+    const [db, lb] = parse(b[0]);
+    return deptRank(da) - deptRank(db) || (levelRank[la] ?? 9) - (levelRank[lb] ?? 9);
+  });
+  host.append(el('h3', { class: 'section-heading', text: '役職別の学び（蓄積）' }));
+  const list = el('div', { class: 'dept-list' });
+  for (const [role, body] of entries) {
+    const details = el('details', { class: 'dept-card' });
+    details.append(el('summary', { text: roleLabel(role) }));
+    const bodyHost = el('div', { class: 'dept-body' });
+    bodyHost.append(markdown(typeof body === 'string' ? body : '', 'md'));
+    details.append(bodyHost);
+    list.append(details);
+  }
+  host.append(list);
+}
+
+/** 過去の日報・学び（テキストのみ）。新しい日から並べる。 */
+function appendReportHistory(host, history) {
+  const days = Array.isArray(history) ? history.filter((d) => d && typeof d === 'object') : [];
+  if (days.length === 0) return;
+  host.append(el('h3', { class: 'section-heading', text: '過去の日報・学び' }));
+  const list = el('div', { class: 'history-list' });
+  for (const day of days) {
+    const details = el('details', { class: 'dept-card history-card' });
+    details.append(el('summary', { text: formatDateJa(day.date) }));
+    const body = el('div', { class: 'dept-body' });
+    body.append(el('h4', { class: 'section-heading', text: '全社日報' }));
+    body.append(markdown(day.company_md));
+    body.append(el('h4', { class: 'section-heading', text: '学び' }));
+    body.append(markdown(day.learnings_md));
+    appendDeptReports(body, day.depts, '部署別の日報');
+    details.append(body);
+    list.append(details);
+  }
+  host.append(list);
+}
+
 function renderReports(data) {
   const section = panel('reports', '日報・学び', '全社日報・学び・部署別の日報・稼働タイムライン');
   const reports = data.reports && typeof data.reports === 'object' ? data.reports : {};
@@ -812,22 +877,15 @@ function renderReports(data) {
   section.append(el('h3', { class: 'section-heading', text: '全社日報 本文' }));
   section.append(markdown(reports.company_md));
 
-  const depts = reports.depts && typeof reports.depts === 'object' && !Array.isArray(reports.depts)
-    ? Object.entries(reports.depts)
-    : [];
-  if (depts.length > 0) {
-    depts.sort((a, b) => deptRank(a[0]) - deptRank(b[0]));
-    section.append(el('h3', { class: 'section-heading', text: '部署別の日報' }));
-    const list = el('div', { class: 'dept-list' });
-    for (const [dept, body] of depts) {
-      const details = el('details', { class: 'dept-card' });
-      details.append(el('summary', { text: deptLabel(dept) }));
-      const bodyHost = el('div', { class: 'dept-body' });
-      bodyHost.append(markdown(typeof body === 'string' ? body : '', 'md'));
-      details.append(bodyHost);
-      list.append(details);
-    }
-    section.append(list);
+  section.append(el('h3', { class: 'section-heading', text: '学び 本文' }));
+  section.append(markdown(reports.learnings_md));
+
+  appendDeptReports(section, reports.depts, '部署別の日報');
+  appendRoleLearnings(section, reports.role_learnings);
+  appendReportHistory(section, reports.history);
+
+  if (typeof reports.missing_reason === 'string' && reports.missing_reason) {
+    section.append(el('p', { class: 'img-missing', text: reports.missing_reason }));
   }
 
   const timeline = Array.isArray(data.timeline) ? data.timeline : [];
