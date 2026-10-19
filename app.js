@@ -18,6 +18,7 @@ import {
   renderFinanceSection,
 } from './views.js';
 import {
+  dataFreshness,
   deadlineLevel,
   deptLabel,
   formatDateJa,
@@ -37,6 +38,7 @@ import {
   phaseLabel,
   roleLabel,
   safeHref,
+  STALE_AFTER_MINUTES,
   statusLabel,
   statusTone,
   topN,
@@ -197,6 +199,16 @@ function renderHeader(data) {
   elapsedItem.append(el('strong', { class: 'header-value', text: formatElapsed(generated) }));
   elapsedItem.append(span('header-label', `(${formatDateTimeJa(generated)})`));
   host.append(elapsedItem);
+
+  if (dataFreshness(generated) === 'stale') {
+    host.append(
+      el('span', {
+        class: 'header-item header-item--warn',
+        text: 'データが古い',
+        attrs: { title: `生成から${STALE_AFTER_MINUTES}分を超えています` },
+      }),
+    );
+  }
 
   const sources = data.sources;
   if (sources && typeof sources === 'object' && !Array.isArray(sources)) {

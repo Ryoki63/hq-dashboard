@@ -152,6 +152,20 @@ export function heartbeatLevel(value, now = Date.now()) {
   return 'ok';
 }
 
+/** 生成データを「古い」と見なすまでの分数。 */
+export const STALE_AFTER_MINUTES = 120;
+
+/**
+ * 生成データの鮮度。generated_at が 120 分より古ければ 'stale'。
+ * 120 分以内は 'ok'、欠落・不正な日時は 'unknown'（どちらも警告しない）。
+ */
+export function dataFreshness(value, now = Date.now()) {
+  const d = parseTime(value);
+  if (!d) return 'unknown';
+  const minutes = (nowMs(now) - d.getTime()) / MINUTE;
+  return minutes > STALE_AFTER_MINUTES ? 'stale' : 'ok';
+}
+
 /**
  * KPI の表示。null / undefined は 0 と混同せず「未取得：理由」にする。
  * 0 はそのまま 0。
