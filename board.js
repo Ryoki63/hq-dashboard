@@ -530,7 +530,10 @@ export function renderBoard(host, decisions, ctx = {}) {
       const choice = awaiting.verdict === 'approve' && isText(awaiting.choiceKey) ? `(案${awaiting.choiceKey})` : '';
       head.append(el('span', 'board-badge board-badge--decided', `${name}${choice}`));
     } else if (status === 'approved') {
-      head.append(el('span', 'board-badge board-badge--approved', `承認${isText(d.choice) ? `(案${d.choice})` : ''}`));
+      const approvedText = `承認${isText(d.choice) ? `(案${d.choice})` : ''}`;
+      const approvedBadge = el('span', 'board-badge board-badge--approved', approvedText);
+      approvedBadge.setAttribute('title', approvedText);
+      head.append(approvedBadge);
     } else if (status === 'rejected') {
       head.append(el('span', 'board-badge board-badge--rejected', '見送り'));
     } else if (pending && col.key === 'hold') {

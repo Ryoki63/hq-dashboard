@@ -339,6 +339,21 @@
   color: var(--heading, #3a2f10);
 }
 
+.board-row-head .board-badge {
+  flex: 0 1 auto;
+  max-width: 14em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-row-actions {
+  flex: none;
+}
+.board-row-title {
+  min-width: 6em;
+}
+
 .board-card-head {
   display: flex;
   align-items: center;

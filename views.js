@@ -410,6 +410,13 @@ function deptCard(dept, index0, maxBusy, labels, now) {
   if (running !== null && running > 0) add(head, h('span', 'view-badge view-badge--ok', `実行中 ${running}`));
   add(card, head);
 
+  const util = num(dept.utilization);
+  const target = num(dept.utilization_target) ?? 0.86;
+  if (util !== null) {
+    const pct = Math.round(util * 100);
+    add(card, h('p', util >= target ? 'view-ok' : 'view-fail', `稼働率 ${pct}%（目標 ${Math.round(target * 100)}%）`));
+  }
+
   const count = h('p', 'view-dept-runs');
   add(count, h('span', 'view-dept-runs-num', runs === null ? '未取得' : `${runs}`));
   if (runs !== null) add(count, h('span', 'view-dept-runs-unit', '回実行'));
