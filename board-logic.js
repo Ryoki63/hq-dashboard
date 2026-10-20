@@ -361,3 +361,43 @@ export async function postViaRelay({ relayUrl, passphrase, issueRef, body, fetch
   if (status === 429) return { ok: false, status, message: 'しばらくしてからもう一度お試しください' };
   return { ok: false, status, message: RELAY_MSG_DEFAULT };
 }
+
+/** 自由記述メモを中継 Worker の /memo へ POST(連絡板 Issue にコメントとして届く)。 */
+export async function postMemoViaRelay({ relayUrl, passphrase, text, fetchImpl, subtle } = {}) {
+  if (!isRelayUsable(relayUrl, passphrase)) return { ok: false, message: '中継が設定されていません' };
+  const body = typeof text === 'string' ? text.trim() : '';
+  if (!body) return { ok: false, message: 'メモが空です' };
+  if (Array.from(body).length > 1500) return { ok: false, message: '1500文字以内にしてください' };
+  if (typeof fetchImpl !== 'function') return { ok: false, message: '通信機能が利用できません' };
+  let key;
+  try {
+    key = await deriveRelayKey(passphrase, subtle);
+  } catch {
+    return { ok: false, message: RELAY_MSG_DEFAULT };
+  }
+  let res;
+  try {
+    res = await fetchImpl(`${relayUrl.replace(/\/+$/, '')}/memo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body }),
+    });
+  } catch {
+    return { ok: false, message: RELAY_MSG_DEFAULT };
+  }
+  if (res && res.ok) {
+    let url = null;
+    try {
+      const data = await res.json();
+      if (data && typeof data.url === 'string' && data.url.startsWith('https://github.com/')) url = data.url;
+    } catch {
+      url = null;
+    }
+    return { ok: true, url };
+  }
+  const status = res && typeof res.status === 'number' ? res.status : 0;
+  if (status === 401) return { ok: false, status, message: '認証に失敗しました。ロックして入り直してください' };
+  if (status === 400) return { ok: false, status, message: '送れない文字(HTMLコメント記号など)が含まれています' };
+  if (status === 429) return { ok: false, status, message: 'しばらくしてからもう一度お試しください' };
+  return { ok: false, status, message: RELAY_MSG_DEFAULT };
+}

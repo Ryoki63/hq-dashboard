@@ -8,6 +8,8 @@
 
 import { DecryptionError, decryptEnvelope } from './crypto.js';
 import { renderBoard, TOKEN_KEY } from './board.js';
+import { postMemoViaRelay } from './board-logic.js';
+import { RELAY_URL } from './relay-config.js';
 import { enhance as enhanceMotion, disable as disableMotion } from './motion.js';
 import { initTheme } from './theme.js';
 import {
@@ -277,6 +279,32 @@ function boardStorage() {
     set: safeStorageSet,
     remove: safeStorageRemove,
   };
+}
+
+function renderMemo() {
+  const section = panel('memo', '自由記述欄', 'GPT常駐エージェントへの連絡板です。送った内容は GitHub Issue #190 に届き、常時監視されます');
+  const passphrase = safeStorageGet(PASS_STORAGE_KEY) || '';
+  const form = el('div', { class: 'memo-form' });
+  const area = el('textarea', { class: 'memo-input', attrs: { rows: '4', maxlength: '1500', placeholder: '指示・メモ・気づきを自由に書いてください(1500文字まで)', 'aria-label': '自由記述' } });
+  const send = el('button', { class: 'board-btn board-btn--primary', text: '送信', attrs: { type: 'button' } });
+  const status = el('p', { class: 'memo-status', attrs: { role: 'status' } });
+  send.addEventListener('click', async () => {
+    send.disabled = true;
+    status.textContent = '送信中…';
+    const r = await postMemoViaRelay({
+      relayUrl: RELAY_URL, passphrase, text: area.value, fetchImpl: (...a) => fetch(...a),
+    });
+    send.disabled = false;
+    if (r.ok) {
+      area.value = '';
+      status.textContent = '送信しました。エージェントが確認します。';
+    } else {
+      status.textContent = r.message || '送信できませんでした';
+    }
+  });
+  form.append(area, send, status);
+  section.append(form);
+  return section;
 }
 
 function renderDecisions(data) {
@@ -920,6 +948,7 @@ function renderDashboard(data) {
   if (warning) dash.append(warning);
   dash.append(renderKpiTiles(data, Date.now()));
   dash.append(renderDecisions(data));
+  dash.append(renderMemo());
   dash.append(renderPhaseSection(data, Date.now()));
   dash.append(renderAgentsSection(data, Date.now()));
   dash.append(renderModelsSection(data, Date.now()));

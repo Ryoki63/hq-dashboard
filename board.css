@@ -780,3 +780,7 @@
     flex: 1 1 100%;
   }
 }
+
+.memo-form { display: grid; gap: 8px; }
+.memo-input { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; border: 1px solid #8884; border-radius: 8px; background: transparent; color: inherit; resize: vertical; }
+.memo-status { margin: 0; font-size: 0.9em; opacity: 0.8; }
