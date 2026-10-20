@@ -1170,6 +1170,18 @@ async function boot() {
     return;
   }
 
+  // 平文配備（data.json があるとき）はパスフレーズ無しでそのまま開く。
+  try {
+    const response = await fetch('data.json', { cache: 'no-store' });
+    if (response.ok) {
+      showDashboard(await response.json());
+      if (lockButton) lockButton.hidden = true;
+      return;
+    }
+  } catch {
+    // 平文データが無ければ従来の暗号化フローへ。
+  }
+
   const saved = safeStorageGet(PASS_STORAGE_KEY);
   if (!saved) {
     showLock('');
